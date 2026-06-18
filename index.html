@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>至尊版·股票热点双级看板与龙回头量化系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&family=JetBrains+Mono:wght=400;700&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .font-mono-custom { font-family: 'JetBrains Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .heatmap-cell { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .heatmap-cell:hover { transform: scale(1.15); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); z-index: 20; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-[#0f172a] text-slate-100 min-h-screen pb-12 overflow-x-hidden">
+
+    <!-- Datalists -->
+    <datalist id="historyLevel1List"></datalist>
+    <datalist id="historyLevel2List"></datalist>
+    <datalist id="historyLeaderNameList"></datalist>
+
+    <!-- Toast -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-[110]">
+        <div class="bg-[#1e293b] border border-slate-700 p-6 rounded-2xl max-w-sm w-full mx-4 space-y-4 shadow-2xl">
+            <div class="flex items-center gap-3 text-red-400">
+                <span id="confirmModalIcon" class="text-2xl">🚨</span>
+                <h3 id="confirmModalTitle" class="text-lg font-bold text-slate-100">确认操作</h3>
+            </div>
+            <p id="confirmModalMsg" class="text-sm text-slate-300 leading-relaxed"></p>
+            <div id="confirmModalInputContainer" class="hidden">
+                <input type="password" id="confirmModalInput" placeholder="请输入密码验证(simon)" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none">
+                <p id="confirmModalError" class="text-xs text-red-500 mt-1 hidden">密码错误</p>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-xl transition-all">取消</button>
+                <button id="confirmModalActionBtn" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-xl transition-all">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Stock Modal -->
+    <div id="editStockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-[100] p-4">
+        <div class="bg-[#1e293b] border border-emerald-700/50 p-6 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                <h3 id="editStockModalTitle" class="text-lg font-bold text-emerald-400 flex items-center gap-2"><span>✏️</span> 全局穿透编辑中心</h3>
+                <button onclick="closeEditStockModal()" class="text-slate-400 hover:text-red-400 transition-colors">✕</button>
+            </div>
+            <div class="space-y-4 overflow-y-auto pr-2 no-scrollbar flex-1">
+                <input type="hidden" id="editStockOriginalCode">
+                <input type="hidden" id="editStockOriginalDate">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">个股名称 <span class="text-red-500">*</span></label>
+                        <input type="text" id="editStockName" class="w-full bg-[#0f172a] text-emerald-300 font-bold border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">证券代码 <span class="text-emerald-500 text-[9px]">(现已解锁，支持修改)</span> <span class="text-red-500">*</span></label>
+                        <input type="text" id="editStockCode" class="w-full bg-[#0f172a] text-emerald-300 font-mono font-bold border border-emerald-700/50 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none" placeholder="例如: 000001">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">所属一级热点 (大产业)</label>
+                        <input type="text" id="editStockLevel1" list="historyLevel1List" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="如: 低空经济">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">所属二级热点 (细分逻辑) <span class="text-red-500">*</span></label>
+                        <input type="text" id="editStockLevel2" list="historyLevel2List" onchange="autoFillEditModalByLevel2(this.value)" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="如: eVTOL">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">一级热点产业大逻辑 (全局同步)</label>
+                    <textarea id="editStockLevel1Analysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">二级热点爆发逻辑 (全局同步) <span class="text-red-500">*</span></label>
+                    <textarea id="editStockHotspotAnalysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">个股自身驱动逻辑与特色 <span class="text-red-500">*</span></label>
+                    <textarea id="editStockAnalysis" rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center">
+                <span class="text-[10px] text-slate-500">💡 提示：保存后，全库具有相同二级热点的数据将自动同步逻辑。</span>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeEditStockModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-semibold rounded-xl transition-all">取消</button>
+                    <button type="button" onclick="saveEditedStock()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-emerald-600/20">💾 穿透保存并同步</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 space-y-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#1e293b]/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-xl">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🐉</span>
+                    <h1 class="text-2xl font-extrabold bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">股票热点与龙回头量化系统</h1>
+                    <span class="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 极速双引擎聚合版</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1 font-medium font-mono-custom">批处理现价秒出 / 渐进式历史回溯 / 彻底阻断挂起Bug</p>
+            </div>
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white shadow-lg transition-all">📊 看板大厅</button>
+                <button onclick="switchTab('dragon')" id="btn-tab-dragon" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🐉 龙回头策略池</button>
+                <button onclick="switchTab('database')" id="btn-tab-database" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🗄️ 全量个股库</button>
+                <button onclick="switchTab('industry')" id="btn-tab-industry" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">⛓️ 产业链研究</button>
+                <button onclick="switchTab('editor')" id="btn-tab-editor" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">✍️ 数据录入/历史</button>
+            </div>
+        </header>
+
+        <!-- Tab 1: 看板大厅 -->
+        <main id="tab-dashboard" class="space-y-6">
+            <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+                    <div class="space-y-1">
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>📅</span> 爆发题材强度热力图</h2>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-400 font-medium">查看月份:</span>
+                            <select id="heatmapYearSelect" onchange="onHeatmapDateControlChanged()" class="bg-[#0f172a] text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none"></select>
+                            <select id="heatmapMonthSelect" onchange="onHeatmapDateControlChanged()" class="bg-[#0f172a] text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none">
+                                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto bg-[#0f172a]/60 p-3 rounded-xl border border-slate-800 text-xs">
+                        <span class="text-slate-400 font-medium">多级追踪：</span>
+                        <select id="trackerLevel1Select" onchange="onTrackerChanged()" class="bg-[#1e293b] border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px]"><option value="">- 一级热点 (全部) -</option></select>
+                        <select id="trackerLevel2Select" onchange="onTrackerChanged()" class="bg-[#1e293b] border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px]"><option value="">- 二级热点 (全部) -</option></select>
+                        <button onclick="resetTracker()" class="text-emerald-400 hover:text-emerald-300 font-semibold underline transition-all">重置</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto pb-2 no-scrollbar">
+                    <div class="min-w-[800px]">
+                        <p class="text-xs text-slate-400 mb-3 animate-pulse" id="heatmapSubtitle">正在载入题材分布脉络...</p>
+                        <div id="heatmapGrid" class="flex flex-wrap gap-2.5"></div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid lg:grid-cols-12 gap-6">
+                <!-- Date & List -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                        <h3 class="text-md font-bold text-slate-100 flex items-center gap-2"><span>🔍</span> 交易日定位</h3>
+                        <input type="date" id="datePicker" onchange="onDateChanged()" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                        <div class="flex justify-between items-center"><h3 class="text-md font-bold text-slate-100 flex items-center gap-2"><span>🔥</span> 爆发板块名单</h3><span id="hotspotCountBadge" class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full font-bold">0 个</span></div>
+                        <p class="text-xs text-slate-400" id="currentDateTitle">选定日期：暂无选中</p>
+                        <div id="dailyHotspotsList" class="space-y-2.5 max-h-[350px] overflow-y-auto pr-1 no-scrollbar"></div>
+                    </div>
+                </div>
+
+                <!-- Detail & Watchlist -->
+                <div class="lg:col-span-8 space-y-6">
+                    <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg min-h-[400px] flex flex-col justify-between">
+                        <div>
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-700 pb-4 mb-4">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span id="detailHotspotL1" class="text-xs font-semibold px-2 py-0.5 bg-slate-800 text-slate-400 rounded">一级分类: --</span>
+                                        <span id="detailHotspotIntensity" class="text-xs font-semibold px-2 py-0.5 rounded">--</span>
+                                    </div>
+                                    <h2 id="detailHotspotName" class="text-xl font-bold text-slate-100 mt-1">请选择板块查看透析详情</h2>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <p id="detailDate" class="text-xs text-slate-400 self-center">研报归档日期: --</p>
+                                    <button onclick="refreshCurrentHotspotPrices()" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-md"><span>⚡</span> 批量同步当前板块</button>
+                                </div>
+                            </div>
+                            <div class="space-y-4 mb-6">
+                                <div class="bg-[#0f172a] p-4 rounded-xl border border-slate-800">
+                                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">💡 核心驱动逻辑与产业 background：</h4>
+                                    <p id="detailHotspotAnalysis" class="text-sm text-slate-300 leading-relaxed whitespace-pre-line"></p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-300 mb-3 flex items-center gap-1.5"><span>👑</span> 核心龙头股池价格与热度监控</h3>
+                                <div id="detailLeadersGrid" class="grid sm:grid-cols-2 gap-4"></div>
+                            </div>
+                        </div>
+                        <div class="border-t border-slate-800 mt-6 pt-4 flex justify-between items-center text-xs text-slate-400">
+                            <div>行情源: <span class="text-[#00b0ff] font-bold">腾讯批量秒出 + 官方K线回溯 融合版</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1e293b] p-6 rounded-2xl border border-emerald-700/30 shadow-lg shadow-emerald-900/10">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-md font-bold text-emerald-400 flex items-center gap-2"><span>⭐</span> 近日关注个股池</h3>
+                            <button onclick="refreshWatchlistPrices()" class="px-3 py-1.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 rounded-lg text-xs font-semibold transition-all">🔄 刷新关注池</button>
+                        </div>
+                        <div id="watchlistContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Tab 2: 全量个股数据库 -->
+        <main id="tab-database" class="hidden space-y-6">
+            <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>🗄️</span> 核心全量个股数据库 (平铺总览)</h2>
+                        <p class="text-xs text-slate-400 mt-1">💡 操作秘籍：支持多条件复合筛选；新增支持单行编辑穿透更新。</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="openAddStockModal()" class="px-4 py-2.5 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 text-xs font-bold rounded-xl border border-emerald-500/30 transition-all flex items-center gap-1.5">➕ 手动新增单股</button>
+                        <input type="file" id="dbExcelFile" class="hidden" accept=".xlsx, .xls" onchange="importDatabaseExcel(event)">
+                        <button onclick="document.getElementById('dbExcelFile').click()" class="px-4 py-2.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs font-bold rounded-xl border border-blue-500/30 transition-all flex items-center gap-1.5">📥 智能导入</button>
+                        <button onclick="exportDatabaseExcel()" class="px-4 py-2.5 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 text-xs font-bold rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5">💾 导出全量库</button>
+                        <button onclick="runBulkDiagnostic('db')" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg transition-all"><span>⚡</span> 多线程极速扫描全库</button>
+                    </div>
+                </div>
+
+                <div id="dbDiagnosticProgressContainer" class="p-4 bg-[#0f172a] rounded-xl border border-slate-800/80 hidden">
+                    <div class="flex justify-between items-center mb-1.5 text-xs text-slate-300"><span id="dbDiagnosticStatusText" class="font-semibold text-emerald-400 animate-pulse">🔄 现价秒出，正在回溯K线历史...</span><span id="dbDiagnosticPercentText" class="font-mono">0%</span></div>
+                    <div class="w-full bg-slate-800 rounded-full h-2"><div id="dbDiagnosticProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 border-t border-slate-800 pt-4">
+                    <input type="text" id="dbSearchInput" oninput="renderDatabasePool()" placeholder="全局模糊搜索名称、代码、行业逻辑..." class="flex-1 min-w-[240px] bg-[#0f172a] text-sm text-slate-100 border border-slate-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <button onclick="resetDatabaseFilters()" class="text-xs text-slate-400 hover:text-emerald-400 underline">清除过滤</button>
+                </div>
+                <div id="dbActiveFiltersBreadcrumbs" class="flex flex-wrap gap-2 text-xs hidden"></div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-[#0f172a]/40 pb-20"> 
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-xs text-slate-400 font-semibold bg-[#0f172a]/80 select-none whitespace-nowrap">
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('level1')">一级热点 <span id="db-sort-icon-level1">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level1', 'database')">▼</span></div><div id="inline-filter-database-level1" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 min-w-[180px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('level1Analysis')">一级逻辑 <span id="db-sort-icon-level1Analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level1Analysis', 'database')">▼</span></div><div id="inline-filter-database-level1Analysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('level2')">二级热点 <span id="db-sort-icon-level2">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level2', 'database')">▼</span></div><div id="inline-filter-database-level2" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 min-w-[200px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('hotspotAnalysis')">二级逻辑 <span id="db-sort-icon-hotspotAnalysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'hotspotAnalysis', 'database')">▼</span></div><div id="inline-filter-database-hotspotAnalysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2"></div></th>
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('name')">名称/代码 <span id="db-sort-icon-name">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'name', 'database')">▼</span></div><div id="inline-filter-database-name" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 min-w-[180px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('analysis')">个股逻辑 <span id="db-sort-icon-analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'analysis', 'database')">▼</span></div><div id="inline-filter-database-analysis" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2"></div></th>
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('currentPrice')">现价 <span id="db-sort-icon-currentPrice">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'currentPrice', 'database')">▼</span></div><div id="inline-filter-database-currentPrice" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('fiveDayChangePercent')">5日涨幅 <span id="db-sort-icon-fiveDayChangePercent">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'fiveDayChangePercent', 'database')">▼</span></div><div id="inline-filter-database-fiveDayChangePercent" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDatabasePool('pullback')">1月高位回撤 <span id="db-sort-icon-pullback">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'pullback', 'database')">▼</span></div><div id="inline-filter-database-pullback" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
+                                <th class="py-3 px-3 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="databasePoolTableBody" class="text-sm text-slate-300 divide-y divide-slate-800/60 max-h-[600px] overflow-y-auto"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Tab 3: 龙回头策略池 -->
+        <main id="tab-dragon" class="hidden space-y-6">
+            <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>🐉</span> 龙回头量化筛选池</h2>
+                    <button onclick="runBulkDiagnostic('dragon')" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl text-xs font-bold">⚡ 一键极速并发扫描</button>
+                </div>
+                <div id="diagnosticProgressContainer" class="p-4 bg-[#0f172a] rounded-xl border border-slate-800/80 hidden">
+                    <div class="flex justify-between items-center mb-1.5 text-xs text-slate-300"><span id="diagnosticStatusText" class="font-semibold text-emerald-400 animate-pulse">🔄 现价秒出，正在回溯历史包...</span><span id="diagnosticPercentText" class="font-mono">0%</span></div>
+                    <div class="w-full bg-slate-800 rounded-full h-2"><div id="diagnosticProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <input type="text" id="dragonSearchInput" oninput="renderDragonPool()" placeholder="搜索名称、代码、行业..." class="flex-1 min-w-[240px] bg-[#0f172a] text-sm text-slate-100 border border-slate-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <select id="dragonSignalFilter" onchange="renderDragonPool()" class="bg-[#0f172a] text-sm text-slate-200 border border-slate-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">- 所有诊断信号 -</option><option value="MACD底背离">🌟 MACD底背离</option><option value="黄金买点">🔥 龙回头买点 (-15%~-35%)</option>
+                        <option value="接近20日线">🎯 接近20日均线</option><option value="强势洗盘">📈 强势洗盘 (-5%~-15%)</option><option value="支撑试探">⚠️ 支撑位试探 (&lt;-35%)</option>
+                        <option value="极度缩量十字星">💎 极度缩量十字星</option><option value="未诊断">⏳ 待扫描诊断</option>
+                    </select>
+                    <button onclick="toggleDojiOnlyFilter()" id="dragonDojiFilterBtn" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5"><span>💎</span> 仅看缩量十字星</button>
+                    <button onclick="resetDragonFilters()" class="text-xs text-slate-400 hover:text-emerald-400 underline">清除过滤</button>
+                </div>
+                <div id="dragonActiveFiltersBreadcrumbs" class="flex flex-wrap gap-2 text-xs hidden"></div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-[#0f172a]/40 pb-20"> 
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-xs text-slate-400 bg-[#0f172a]/80 select-none whitespace-nowrap">
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('name')">标的信息 <span id="dg-sort-icon-name">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('date')">题材源头/日期 <span id="dg-sort-icon-date">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('intensity')">题材强度 <span id="dg-sort-icon-intensity">↕</span></span></th>
+                                <th class="py-3.5 px-3 min-w-[200px]"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('analysis')">个股逻辑 <span id="dg-sort-icon-analysis">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('limitUpCount10')">前10日涨停 <span id="dg-sort-icon-limitUpCount10">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('currentPrice')">现价 <span id="dg-sort-icon-currentPrice">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('fiveDayChangePercent')">5日近况涨幅 <span id="dg-sort-icon-fiveDayChangePercent">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('pullback')">1月高位回撤 <span id="dg-sort-icon-pullback">↕</span></span></th>
+                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortDragonPool('signal')">诊断信号 <span id="dg-sort-icon-signal">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dragonPoolTableBody" class="text-sm text-slate-300 divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Tab 4: 产业链研究 -->
+        <main id="tab-industry" class="hidden space-y-6">
+            <div class="grid lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-3 space-y-4">
+                    <div class="bg-[#1e293b] p-5 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-700/50">
+                            <h3 class="text-sm font-bold text-emerald-400"><span>⛓️</span> 产业链列表</h3>
+                            <button onclick="createNewIndustry()" class="p-1 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">➕ 新建</button>
+                        </div>
+                        <input type="text" id="industrySearch" oninput="renderIndustryList()" placeholder="搜索产业链..." class="w-full bg-[#0f172a] text-xs text-slate-100 border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <div id="industryListContainer" class="space-y-1.5 max-h-[350px] overflow-y-auto no-scrollbar pr-1"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-9 space-y-6">
+                    <div class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-700/50">
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] text-slate-400 mb-1">产业链标题名称</label>
+                                <input type="text" id="industryTitleInput" oninput="saveCurrentIndustryState()" placeholder="输入产业链名称" class="w-full bg-[#0f172a] text-slate-100 font-bold border border-slate-700 rounded-xl px-3 py-2 text-base focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                            <button onclick="deleteCurrentIndustry()" class="px-3.5 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-xl transition-all">✕ 销毁此研报</button>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold text-slate-300">💡 产业核心逻辑深度剖析</label>
+                            <div class="flex flex-wrap items-center gap-1 p-2 rounded-t-xl bg-[#0f172a] border border-slate-700 border-b-0 text-xs text-slate-300">
+                                <button onclick="execRichCommand('bold')" class="px-2.5 py-1 hover:bg-slate-700 rounded font-bold" title="加粗">B</button>
+                                <button onclick="execRichCommand('foreColor', '#34d399')" class="px-2 py-1 hover:bg-slate-700 text-emerald-400 rounded" title="翠绿高亮">绿</button>
+                                <button onclick="execRichCommand('foreColor', '#f87171')" class="px-2 py-1 hover:bg-slate-700 text-red-400 rounded" title="绯红警戒">红</button>
+                            </div>
+                            <div id="industryRichText" contenteditable="true" oninput="saveCurrentIndustryState()" class="w-full bg-[#0f172a] text-slate-200 border border-slate-700 rounded-b-xl p-6 min-h-[450px] focus:outline-none focus:ring-2 focus:ring-emerald-500 leading-relaxed text-sm whitespace-normal overflow-y-auto max-h-[800px] shadow-inner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Tab 5: 数据录入/历史 -->
+        <main id="tab-editor" class="hidden">
+            <div class="grid lg:grid-cols-12 gap-6">
+                <section class="lg:col-span-5 bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>📝</span> 热点研报录入中心</h2>
+                    <form id="recordForm" onsubmit="saveRecord(event)" class="space-y-4">
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">交易日期 <span class="text-red-500">*</span></label><input type="date" id="formDate" required class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none"></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-xs font-semibold text-slate-400 mb-1">一级热点 <span class="text-red-500">*</span></label><input type="text" id="formLevel1" required list="historyLevel1List" oninput="updateLevel2FormDatalist()" placeholder="如: 半导体" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none"></div>
+                            <div><label class="block text-xs font-semibold text-slate-400 mb-1">二级热点 <span class="text-red-500">*</span></label><input type="text" id="formLevel2" required list="historyLevel2List" oninput="autoFillHotspotByLevel2(this.value)" placeholder="如: eVTOL" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none"></div>
+                        </div>
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">大涨强度 <span class="text-red-500">*</span></label><select id="formIntensity" required class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm"><option value="一般">一般</option><option value="强">强</option><option value="超强" selected>超强</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">一级逻辑</label><textarea id="formLevel1Analysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm"></textarea></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">二级核心解析 <span class="text-red-500">*</span></label><textarea id="formHotspotAnalysis" required rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm"></textarea></div>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all">💾 保存本条板块研报</button>
+                    </form>
+                </section>
+                <section class="lg:col-span-7 bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-slate-100">🏆 核心标列配置</h2>
+                        <button type="button" onclick="addLeaderField()" class="px-3 py-1.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all">➕ 增加龙头标的</button>
+                    </div>
+                    <div id="leadersInputContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 no-scrollbar"></div>
+                </section>
+            </div>
+            <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-md font-bold text-slate-100">🗂️ 历史数据库核心审计</h3>
+                    <button onclick="clearAllData()" class="px-3 py-1 bg-red-600/20 text-red-400 border border-red-500/30 rounded-lg text-xs hover:bg-red-600/30 transition-all">⚠️ 清空全量本地数据</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="border-b border-slate-700 text-xs text-slate-400"><th class="py-3 px-4">日期</th><th class="py-3 px-4">一级热点</th><th class="py-3 px-4">二级热点</th><th class="py-3 px-4">强度</th><th class="py-3 px-4">龙头数</th><th class="py-3 px-4 text-right">操作</th></tr></thead>
+                        <tbody id="historyTableBody" class="text-sm text-slate-300"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Core Script -->
+    <script>
+        // --- 1. Variables & Initialization ---
+        let stockData = [], industryData = [], watchlistData = [];
+        let currentlyEditingIndex = null, activeHotspotIndex = 0, activeDate = "", activeIndustryIndex = 0; 
+        
+        let dbFilters = { level1: [], level1Analysis: [], level2: [], hotspotAnalysis: [], name: [], analysis: [], currentPrice: [], fiveDayChangePercent: [], pullback: [] };
+        let columnFilters = { name: [], date: [], intensity: [], analysis: [], limitUpCount10: [], currentPrice: [], fiveDayChangePercent: [], pullback: [], signal: [] };
+        let dragonSortField = "", dragonSortAsc = true, dragonDojiOnlyFilter = false, dbSortField = "", dbSortAsc = true, currentFilterField = "", currentFilterMode = "dragon", activeInlineFilterId = null; 
+        
+        let stockPriceCache = JSON.parse(localStorage.getItem('stockPriceCache')) || {};
+
+        if (localStorage.getItem('stockRecordsV2')) stockData = JSON.parse(localStorage.getItem('stockRecordsV2')); 
+        if (localStorage.getItem('stockIndustryData')) industryData = JSON.parse(localStorage.getItem('stockIndustryData')); 
+        if (localStorage.getItem('stockWatchlist')) watchlistData = JSON.parse(localStorage.getItem('stockWatchlist')) || [];
+        
+        let currentLeadersCount = 0, confirmActionCallback = null;
+
+        // --- 2. Base UI & Form Logic ---
+        function addLeaderField(name = "", code = "", analysis = "") {
+            currentLeadersCount++; const container = document.getElementById('leadersInputContainer'); if (!container) return;
+            const div = document.createElement('div'), rowIdx = currentLeadersCount; div.id = `leader-row-${rowIdx}`; div.className = "p-4 bg-[#0f172a] rounded-xl border border-slate-700/60 grid grid-cols-12 gap-3 items-center relative";
+            div.innerHTML = `<div class="col-span-1 text-center font-bold text-slate-500 self-center">#${rowIdx}</div><div class="col-span-11 sm:col-span-3"><label class="block text-[10px] text-slate-400 mb-0.5">企业名称</label><input type="text" value="${name}" list="historyLeaderNameList" oninput="autoFillLeaderRow(${rowIdx}, this.value)" required class="leader-name-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none" placeholder="万丰奥威"></div><div class="col-span-6 sm:col-span-2"><label class="block text-[10px] text-slate-400 mb-0.5">证券代码</label><input type="text" value="${code}" oninput="autoFillLeaderByCode(${rowIdx}, this.value)" required class="leader-code-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none" placeholder="002085"></div><div class="col-span-12 sm:col-span-6"><label class="block text-[10px] text-slate-400 mb-0.5">个股逻辑</label><textarea required class="leader-analysis-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none resize-y" rows="2">${analysis}</textarea></div><button type="button" onclick="removeLeaderField(${rowIdx})" class="absolute top-2 right-2 text-slate-500 hover:text-red-400 text-xs">✕</button>`;
+            container.appendChild(div);
+        }
+        function removeLeaderField(index) { const el = document.getElementById(`leader-row-${index}`); if (el) { el.remove(); reorderLeaders(); } }
+        function reorderLeaders() { const container = document.getElementById('leadersInputContainer'), rows = container.children; currentLeadersCount = 0; const backup = []; for (let row of rows) backup.push({ name: row.querySelector('.leader-name-input').value, code: row.querySelector('.leader-code-input').value, analysis: row.querySelector('.leader-analysis-input').value }); container.innerHTML = ""; backup.forEach(item => addLeaderField(item.name, item.code, item.analysis)); }
+        function resetForm() { const recordForm = document.getElementById('recordForm'); if (recordForm) recordForm.reset(); const container = document.getElementById('leadersInputContainer'); if (container) container.innerHTML = ""; currentLeadersCount = 0; currentlyEditingIndex = null; const formDate = document.getElementById('formDate'); if (formDate) formDate.disabled = false; addLeaderField(); updateLevel2FormDatalist(); }
+        function showToast(message, type = 'success') { const container = document.getElementById('toastContainer'), toast = document.createElement('div'), bgClass = type === 'success' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' : 'bg-red-500/10 border-red-500/40 text-red-300'; toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-xl border ${bgClass} shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 text-sm font-semibold pointer-events-auto z-[150]`; toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> <span>${message}</span>`; container.appendChild(toast); setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10); setTimeout(() => { toast.classList.add('translate-y-2', 'opacity-0'); setTimeout(() => toast.remove(), 300); }, 3000); }
+        function openCustomConfirm(title, message, callback, isWarning = true, needPassword = false) { document.getElementById('confirmModalTitle').textContent = title; document.getElementById('confirmModalMsg').textContent = message; document.getElementById('confirmModalIcon').textContent = isWarning ? "🚨" : "⚠️"; confirmActionCallback = callback; const inputContainer = document.getElementById('confirmModalInputContainer'); if(needPassword){ inputContainer.classList.remove('hidden'); document.getElementById('confirmModalInput').value = ''; document.getElementById('confirmModalError').classList.add('hidden'); } else { inputContainer.classList.add('hidden'); } document.getElementById('confirmModal').classList.remove('hidden'); }
+        function closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); confirmActionCallback = null; }
+        document.getElementById('confirmModalActionBtn').onclick = () => { if(!document.getElementById('confirmModalInputContainer').classList.contains('hidden')) { if(document.getElementById('confirmModalInput').value !== 'simon') return document.getElementById('confirmModalError').classList.remove('hidden'); } if (confirmActionCallback) confirmActionCallback(); closeConfirmModal(); };
+        
+        function switchTab(tabId) {
+            ['dashboard', 'dragon', 'database', 'editor', 'industry'].forEach(id => { const el = document.getElementById(`tab-${id}`), btn = document.getElementById(`btn-tab-${id}`); if (el) el.classList.add('hidden'); if (btn) btn.className = "px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all"; });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden'); const activeBtn = document.getElementById(`btn-tab-${tabId}`); if (activeBtn) activeBtn.className = "px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white shadow-lg transition-all";
+            if (tabId === 'dashboard') { renderAll(); renderWatchlist(); } else if (tabId === 'dragon') renderDragonPool(); else if (tabId === 'database') renderDatabasePool(); else if (tabId === 'industry') { renderIndustryList(); loadActiveIndustry(); } else if (tabId === 'editor') { renderHistoryTable(); buildHistoryDatalists(); }
+        }
+        function jumpToDatabaseAndFilter(code, name) { switchTab('database'); Object.keys(dbFilters).forEach(k => dbFilters[k] = []); const searchInput = document.getElementById('dbSearchInput'); if (searchInput) searchInput.value = code; renderDatabasePool(); showToast(`🚀 已自动跳转并定位【${name}】`, "success"); }
+
+
+        // --- 3. 稳健极速网络引擎 (无敌并发版) ---
+        
+        // 并发执行控制器：绝不用死锁队列，只用原生的稳健滑动窗口
+        async function runWithConcurrency(tasks, limit = 5) {
+            const results = [];
+            let active = 0, index = 0;
+            return new Promise((resolve) => {
+                const next = async () => {
+                    if (index >= tasks.length && active === 0) { resolve(results); return; }
+                    while (active < limit && index < tasks.length) {
+                        const currentIndex = index++; active++;
+                        // 非常重要的请求间隔，防止被服务器强行踢出
+                        await new Promise(r => setTimeout(r, 100)); 
+                        tasks[currentIndex]().then(res => { results[currentIndex] = res; }).catch(() => { results[currentIndex] = null; }).finally(() => { active--; next(); });
+                    }
+                };
+                next();
+            });
+        }
+
+        // 腾讯批量实盘现价 API (单次瞬间获取 50 只股票，绝不卡死)
+        function fetchTencentBatchQuotes(codes) {
+            return new Promise((resolve) => {
+                if (!codes || codes.length === 0) return resolve({});
+                const symbols = codes.map(c => {
+                    let code = String(c).trim(); while (code.length < 6) code = '0' + code;
+                    if (/^(60|68|90|73|51)/.test(code)) return `sh${code}`;
+                    if (/^(00|30|39|15|18|08)/.test(code)) return `sz${code}`;
+                    if (/^(43|83|87|88|92)/.test(code)) return `bj${code}`;
+                    return `sz${code}`;
+                }).join(',');
+                const script = document.createElement('script');
+                script.src = `https://qt.gtimg.cn/q=${symbols}`; script.charset = 'gbk';
+                const timer = setTimeout(() => { cleanup(); resolve({}); }, 8000);
+                function cleanup() { clearTimeout(timer); if (script.parentNode) script.parentNode.removeChild(script); }
+                script.onload = () => {
+                    const results = {};
+                    codes.forEach(c => {
+                        let code = String(c).trim(); while (code.length < 6) code = '0' + code;
+                        let sym = "";
+                        if (/^(60|68|90|73|51)/.test(code)) sym = `sh${code}`; else if (/^(00|30|39|15|18|08)/.test(code)) sym = `sz${code}`; else if (/^(43|83|87|88|92)/.test(code)) sym = `bj${code}`; else sym = `sz${code}`;
+                        if (window[`v_${sym}`]) { results[code] = window[`v_${sym}`]; delete window[`v_${sym}`]; }
+                    });
+                    cleanup(); resolve(results);
+                };
+                script.onerror = () => { cleanup(); resolve({}); };
+                document.body.appendChild(script);
+            });
+        }
+
+        // 腾讯历史 K 线 API (安全，永不跨域报错)
+        function fetchTencentKline(code) {
+            return new Promise((resolve) => {
+                let c = String(code).trim(); while (c.length < 6) c = '0' + c;
+                let symbol = "";
+                if (/^(60|68|90|73|51)/.test(c)) symbol = `sh${c}`; else if (/^(00|30|39|15|18|08)/.test(c)) symbol = `sz${c}`; else if (/^(43|83|87|88|92)/.test(c)) symbol = `bj${c}`; else symbol = `sz${c}`;
+                
+                const varName = `kline_${c}_${Date.now()}`;
+                const script = document.createElement('script');
+                script.src = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=${varName}&param=${symbol},day,,,30,qfq`;
+                const timer = setTimeout(() => { cleanup(); resolve([]); }, 8000);
+                function cleanup() { clearTimeout(timer); if (script.parentNode) script.parentNode.removeChild(script); }
+                script.onload = () => {
+                    const data = window[varName]; delete window[varName]; cleanup();
+                    if (data && data.data && data.data[symbol]) {
+                        const klines = data.data[symbol].qfqday || data.data[symbol].day || [];
+                        resolve(klines);
+                    } else resolve([]);
+                };
+                script.onerror = () => { cleanup(); resolve([]); };
+                document.body.appendChild(script);
+            });
+        }
+
+        // --- 核心批量执行调度器 ---
+        async function runBulkDiagnostic(mode) {
+            // mode = 'dragon' (量化池) or 'db' (全量库)
+            const candidates = mode === 'dragon' ? scanDragonCandidates() : scanDatabaseCandidates();
+            if (candidates.length === 0) return showToast("无候选股票，请先录入！", "error");
+            
+            let targetDiv = mode === 'dragon' ? 'diagnosticProgressContainer' : 'dbDiagnosticProgressContainer';
+            let targetPct = mode === 'dragon' ? 'diagnosticPercentText' : 'dbDiagnosticPercentText';
+            let targetBar = mode === 'dragon' ? 'diagnosticProgressBar' : 'dbDiagnosticProgressBar';
+            
+            const progressContainer = document.getElementById(targetDiv), percentText = document.getElementById(targetPct), progressBar = document.getElementById(targetBar);
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            
+            showToast("🚀 启动极速混合并行引擎，秒级抓取现价...", "success");
+
+            // 1. 获取所有不重复的有效代码
+            const uniqueCodes = [...new Set(candidates.map(c => c.code).filter(c => c && c !== '000000'))];
+            const total = uniqueCodes.length;
+            
+            // 2. 第一阶段：以 50 股为一包，瞬间秒取所有最新现价！
+            for (let i = 0; i < total; i += 50) {
+                const chunk = uniqueCodes.slice(i, i + 50);
+                const quotes = await fetchTencentBatchQuotes(chunk);
+                for (const code of chunk) {
+                    if (quotes[code]) {
+                        const parts = quotes[code].split('~');
+                        let curPrice = parseFloat(parts[3]);
+                        const yesterday = parseFloat(parts[4]);
+                        if (curPrice === 0 && yesterday > 0) curPrice = yesterday; // 停牌兜底
+                        
+                        let changePct = parseFloat(parts[32]);
+                        if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) {
+                            changePct = ((curPrice - yesterday) / yesterday) * 100;
+                        }
+
+                        if (!stockPriceCache[code]) stockPriceCache[code] = {};
+                        stockPriceCache[code].currentPrice = curPrice;
+                        stockPriceCache[code].dailyChangePercent = changePct;
+                        stockPriceCache[code].timestamp = Date.now();
+                    }
+                }
+                // 每批次请求完立马渲染，实现渐进式秒刷效果
+                if (mode === 'dragon') renderDragonPool(); else renderDatabasePool();
+            }
+
+            // 3. 第二阶段：补齐历史K线（计算5日涨幅，回撤，十日涨停等）
+            let completed = 0;
+            // K线数据较大，采用稳健的 4 并发防封
+            await runWithConcurrency(uniqueCodes.map(code => async () => {
+                const klines = await fetchTencentKline(code);
+                if (klines && klines.length > 0) {
+                    const cache = stockPriceCache[code] || {};
+                    const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]);
+                    
+                    let oneMonthHigh = currentPrice, limitUpCount10 = 0;
+                    
+                    // 5日涨幅
+                    const t_5_index = Math.max(0, klines.length - 6);
+                    const t_5_close = parseFloat(klines[t_5_index][2]);
+                    if (currentPrice > 0 && t_5_close > 0) {
+                        cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100;
+                    }
+
+                    // 1月高位
+                    klines.slice(-22).forEach(k => {
+                        const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h;
+                    });
+                    cache.oneMonthHigh = oneMonthHigh;
+
+                    // 10日涨停
+                    const name = candidates.find(c => c.code === code)?.name || "";
+                    let limitUpThreshold = 0.099;
+                    if (name.includes('ST')) limitUpThreshold = 0.049;
+                    else if (code.startsWith('30') || code.startsWith('688')) limitUpThreshold = 0.199;
+                    else if (code.startsWith('83') || code.startsWith('87') || code.startsWith('88') || code.startsWith('43') || code.startsWith('92')) limitUpThreshold = 0.299; 
+                    
+                    const last11 = klines.slice(-11);
+                    for (let j = 1; j < last11.length; j++) {
+                        const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]);
+                        if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++;
+                    }
+                    cache.limitUpCount10 = limitUpCount10;
+
+                    // 均线与十字星
+                    if (klines.length >= 20) {
+                        let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2]));
+                        cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02;
+                    }
+                    const lastK = klines[klines.length-1];
+                    const o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]);
+                    const bodyRatio = Math.abs(c-o)/o;
+                    const isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c));
+                    const volSlice = klines.slice(-21, -1);
+                    let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }});
+                    cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5);
+
+                    // 极致提速：批量模式直接跳过复杂的 MACD 计算，留给单点诊断
+                    cache.macdDiv = cache.macdDiv || [];
+                    
+                    stockPriceCache[code] = cache;
+                }
+                completed++;
+                const pct = Math.round((completed/total)*100);
+                if(percentText) percentText.textContent = pct + '%';
+                if(progressBar) progressBar.style.width = pct + '%';
+                
+            }), 4);
+
+            localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache));
+            if (mode === 'dragon') renderDragonPool(); else renderDatabasePool();
+            
+            showToast("✅ 全部数据分析完毕！", "success");
+            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 2000);
+        }
+
+        // 单点诊断时，复用批处理第一步，并额外拉取K线
+        async function diagnoseSingleStock(name, code, elementIdPrefix, silent = false) {
+            const spinId = `${elementIdPrefix}-spin-${code}`, btnId = `${elementIdPrefix}-btn-${code}`;
+            const spin = document.getElementById(spinId), btn = document.getElementById(btnId);
+            if (spin) spin.classList.remove('hidden'); if (btn) btn.classList.add('hidden');
+            try {
+                // 1. 获取现价
+                const quotes = await fetchTencentBatchQuotes([code]);
+                if (quotes[code]) {
+                    const parts = quotes[code].split('~');
+                    let curPrice = parseFloat(parts[3]), yesterday = parseFloat(parts[4]);
+                    if (curPrice === 0 && yesterday > 0) curPrice = yesterday;
+                    let changePct = parseFloat(parts[32]);
+                    if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) changePct = ((curPrice - yesterday) / yesterday) * 100;
+                    
+                    if (!stockPriceCache[code]) stockPriceCache[code] = {};
+                    stockPriceCache[code].currentPrice = curPrice;
+                    stockPriceCache[code].dailyChangePercent = changePct;
+                    stockPriceCache[code].timestamp = Date.now();
+                }
+
+                // 2. 获取K线
+                const klines = await fetchTencentKline(code);
+                if (klines.length > 0) {
+                    const cache = stockPriceCache[code];
+                    const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]);
+                    let oneMonthHigh = currentPrice, limitUpCount10 = 0;
+                    const t_5_index = Math.max(0, klines.length - 6), t_5_close = parseFloat(klines[t_5_index][2]);
+                    if (currentPrice > 0 && t_5_close > 0) cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100;
+                    klines.slice(-22).forEach(k => { const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h; });
+                    cache.oneMonthHigh = oneMonthHigh;
+
+                    let limitUpThreshold = name.includes('ST') ? 0.049 : (code.startsWith('30')||code.startsWith('688') ? 0.199 : (code.startsWith('83')||code.startsWith('87')||code.startsWith('88')||code.startsWith('43')||code.startsWith('92') ? 0.299 : 0.099));
+                    const last11 = klines.slice(-11);
+                    for (let j = 1; j < last11.length; j++) { const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]); if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++; }
+                    cache.limitUpCount10 = limitUpCount10;
+
+                    if (klines.length >= 20) { let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2])); cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02; }
+                    const lastK = klines[klines.length-1], o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]);
+                    const bodyRatio = Math.abs(c-o)/o, isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c));
+                    const volSlice = klines.slice(-21, -1); let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }});
+                    cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5);
+                }
+
+                if (!silent) {
+                    localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache));
+                    showToast(`【${name}】同步成功！`);
+                }
+                return true;
+            } catch (err) { 
+                console.warn(`[Network] ${name}(${code}) 取数异常: `, err.message); return false;
+            } finally { 
+                if (spin) spin.classList.add('hidden'); if (btn) btn.classList.remove('hidden'); 
+            }
+        }
+
+        // 仅在手工导入时用于获取代码的腾讯官方提示接口 (不受防刷限制)
+        function fetchStockCodeByName(name) {
+            return new Promise((resolve) => {
+                const script = document.createElement('script'); script.src = `https://smartbox.gtimg.cn/s3/?v=2&q=${encodeURIComponent(name)}&t=all`; script.charset = 'utf-8';
+                const timer = setTimeout(() => { cleanup(); resolve(null); }, 3000);
+                function cleanup() { clearTimeout(timer); if (script.parentNode) script.parentNode.removeChild(script); }
+                script.onload = () => { cleanup(); if (window.v_hint) { const matches = window.v_hint.split('^'); for (let match of matches) { const parts = match.split('~'); if (parts.length >= 3) { const symbolWithPrefix = parts[0], codeOnly = parts[1], stockName = parts[2]; if (/^(sh|sz|bj)\d{6}$/.test(symbolWithPrefix) && /^(60|68|00|30|43|83|87|88|92)\d{4}$/.test(codeOnly)) { if (stockName === name || stockName.includes(name) || name.includes(stockName)) { resolve(codeOnly); return; } } } } } resolve(null); };
+                script.onerror = () => { cleanup(); resolve(null); }; document.body.appendChild(script);
+            });
+        }
+
+        // --- 4. Form Synchronization Logic ---
+        function synchronizeDatabase(updatedRecord) { const targetL2 = updatedRecord.level2.trim().toLowerCase(), targetL1 = updatedRecord.level1 ? updatedRecord.level1.trim() : "", targetL1Analysis = updatedRecord.level1Analysis ? updatedRecord.level1Analysis.trim() : "", targetHotspotAnalysis = updatedRecord.hotspotAnalysis ? updatedRecord.hotspotAnalysis.trim() : ""; let syncCount = 0; stockData.forEach(r => { if (r.level2.trim().toLowerCase() === targetL2) { if (r.level1 !== targetL1 || r.level1Analysis !== targetL1Analysis || r.hotspotAnalysis !== targetHotspotAnalysis) { r.level1 = targetL1; r.level1Analysis = targetL1Analysis; r.hotspotAnalysis = targetHotspotAnalysis; syncCount++; } } }); return syncCount; }
+        function buildHistoryDatalists() { const level1Set = new Set(), level2Set = new Set(), leaderNameSet = new Set(); stockData.forEach(item => { if (item.level1) level1Set.add(item.level1); if (item.level2) level2Set.add(item.level2); if (item.leaders) item.leaders.forEach(l => { if (l.name) leaderNameSet.add(l.name); }); }); const dlL1 = document.getElementById('historyLevel1List'); if (dlL1) { dlL1.innerHTML = ""; level1Set.forEach(val => { const opt = document.createElement('option'); opt.value = val; dlL1.appendChild(opt); }); } const dlL2 = document.getElementById('historyLevel2List'); if (dlL2) { dlL2.innerHTML = ""; level2Set.forEach(val => { const opt = document.createElement('option'); opt.value = val; dlL2.appendChild(opt); }); } const dlLeader = document.getElementById('historyLeaderNameList'); if (dlLeader) { dlLeader.innerHTML = ""; leaderNameSet.forEach(val => { const opt = document.createElement('option'); opt.value = val; dlLeader.appendChild(opt); }); } updateLevel2FormDatalist(); }
+        function updateLevel2FormDatalist() { const lvl1Input = document.getElementById('formLevel1'), lvl1Value = lvl1Input ? lvl1Input.value.trim().toLowerCase() : "", dlL2 = document.getElementById('historyLevel2List'); if (!dlL2) return; dlL2.innerHTML = ""; const level2Set = new Set(); stockData.forEach(item => { if (!lvl1Value || (item.level1 && item.level1.toLowerCase() === lvl1Value)) if (item.level2) level2Set.add(item.level2); }); level2Set.forEach(val => { const opt = document.createElement('option'); opt.value = val; dlL2.appendChild(opt); }); }
+        function autoFillEditModalByLevel2(lvl2Value) { lvl2Value = lvl2Value.trim(); if (!lvl2Value) return; let matchedRecord = stockData.find(item => item.level2.toLowerCase() === lvl2Value.toLowerCase()); if (matchedRecord) { document.getElementById('editStockLevel1').value = matchedRecord.level1 || ""; document.getElementById('editStockLevel1Analysis').value = matchedRecord.level1Analysis || ""; document.getElementById('editStockHotspotAnalysis').value = matchedRecord.hotspotAnalysis || ""; showToast(`已自动带入【${lvl2Value}】配置`, "success"); } }
+        function autoFillHotspotByLevel2(lvl2Value) { lvl2Value = lvl2Value.trim(); if (!lvl2Value) return; const matchedRecord = stockData.find(item => item.level2.toLowerCase() === lvl2Value.toLowerCase()); if (matchedRecord) { document.getElementById('formLevel1').value = matchedRecord.level1 || ""; document.getElementById('formLevel1Analysis').value = matchedRecord.level1Analysis || ""; document.getElementById('formHotspotAnalysis').value = matchedRecord.hotspotAnalysis || ""; updateLevel2FormDatalist(); } }
+        function autoFillLeaderByCode(rowIdx, codeVal) { codeVal = codeVal.trim(); if (codeVal.length < 6) return; let matchedLeader = null; for (let rec of stockData) { if (rec.leaders) { matchedLeader = rec.leaders.find(l => l.code.trim() === codeVal); if (matchedLeader) break; } } if (matchedLeader) { const row = document.getElementById(`leader-row-${rowIdx}`); if (row) { row.querySelector('.leader-name-input').value = matchedLeader.name; row.querySelector('.leader-analysis-input').value = matchedLeader.analysis; } } }
+        function autoFillLeaderRow(rowIdx, leaderNameVal) { leaderNameVal = leaderNameVal.trim(); if (!leaderNameVal) return; let matchedLeader = null; for (let rec of stockData) { if (rec.leaders) { matchedLeader = rec.leaders.find(l => l.name.toLowerCase() === leaderNameVal.toLowerCase()); if (matchedLeader) break; } } if (matchedLeader) { const row = document.getElementById(`leader-row-${rowIdx}`); if (row) { row.querySelector('.leader-code-input').value = matchedLeader.code; row.querySelector('.leader-analysis-input').value = matchedLeader.analysis; } } }
+        function openEditStockModal(date, l2, lCode) { const dayRecords = stockData.filter(r => r.date === date), activeRecord = dayRecords.find(r => r.level2 === l2); if (!activeRecord) return showToast("未找到该热点档案！", "error"); const targetLeader = activeRecord.leaders.find(l => l.code === lCode); if (!targetLeader) return showToast("未找到该个股！", "error"); document.getElementById('editStockOriginalDate').value = date; document.getElementById('editStockOriginalCode').value = lCode; document.getElementById('editStockName').value = targetLeader.name; document.getElementById('editStockCode').value = targetLeader.code; document.getElementById('editStockLevel1').value = activeRecord.level1 || ""; document.getElementById('editStockLevel1Analysis').value = activeRecord.level1Analysis || ""; document.getElementById('editStockLevel2').value = activeRecord.level2; document.getElementById('editStockHotspotAnalysis').value = activeRecord.hotspotAnalysis || ""; document.getElementById('editStockAnalysis').value = targetLeader.analysis || ""; document.getElementById('editStockModal').classList.remove('hidden'); }
+        function closeEditStockModal() { document.getElementById('editStockModal').classList.add('hidden'); }
+        function saveEditedStock() { const date = document.getElementById('editStockOriginalDate').value, origCode = document.getElementById('editStockOriginalCode').value, name = document.getElementById('editStockName').value.trim(), newCode = document.getElementById('editStockCode').value.trim(), level1 = document.getElementById('editStockLevel1').value.trim(), level1Analysis = document.getElementById('editStockLevel1Analysis').value.trim(), level2 = document.getElementById('editStockLevel2').value.trim(), hotspotAnalysis = document.getElementById('editStockHotspotAnalysis').value.trim(), analysis = document.getElementById('editStockAnalysis').value.trim(); if (!name || !newCode || !level2) return showToast("必填项不完整！", "error"); stockData.forEach(r => { if (r.date === date && r.leaders) { r.leaders = r.leaders.filter(l => l.code !== origCode); } }); if (origCode !== newCode) { if (stockPriceCache[origCode]) { stockPriceCache[newCode] = stockPriceCache[origCode]; delete stockPriceCache[origCode]; localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache)); } const wlIndex = watchlistData.findIndex(item => item.code === origCode); if (wlIndex !== -1) { watchlistData[wlIndex].code = newCode; watchlistData[wlIndex].name = name; localStorage.setItem('stockWatchlist', JSON.stringify(watchlistData)); } } const targetRecordIdx = stockData.findIndex(r => r.date === date && r.level2.toLowerCase() === level2.toLowerCase()); if (targetRecordIdx !== -1) { stockData[targetRecordIdx].level1 = level1; stockData[targetRecordIdx].level1Analysis = level1Analysis; stockData[targetRecordIdx].hotspotAnalysis = hotspotAnalysis; stockData[targetRecordIdx].leaders.push({ name, code: newCode, analysis }); } else { stockData.push({ date: date, level1: level1, level1Analysis: level1Analysis, level2: level2, intensity: "超强", hotspotAnalysis: hotspotAnalysis, leaders: [{ name, code: newCode, analysis }] }); } const syncCount = synchronizeDatabase({ level2, level1, level1Analysis, hotspotAnalysis }); stockData = stockData.filter(r => r.leaders && r.leaders.length > 0); stockData.sort((a, b) => new Date(b.date) - new Date(a.date)); localStorage.setItem('stockRecordsV2', JSON.stringify(stockData)); buildHistoryDatalists(); renderDatabasePool(); renderDragonPool(); closeEditStockModal(); showToast(`保存成功！同步 ${syncCount} 项。`, "success"); }
+        function openAddStockModal() { document.getElementById('editStockOriginalDate').value = new Date().toISOString().slice(0, 10); document.getElementById('editStockOriginalCode').value = "NEW"; document.getElementById('editStockName').value = ""; document.getElementById('editStockCode').value = ""; document.getElementById('editStockLevel1').value = ""; document.getElementById('editStockLevel1Analysis').value = ""; document.getElementById('editStockLevel2').value = ""; document.getElementById('editStockHotspotAnalysis').value = ""; document.getElementById('editStockAnalysis').value = ""; document.getElementById('editStockModalTitle').innerHTML = "<span>➕</span> 手动新增独立个股"; document.getElementById('editStockModal').classList.remove('hidden'); }
+
+        // --- 5. Timeline & Heatmap ---
+        function getTimelineDays(year, month, isTracking) { const arr = []; if (isTracking) { if (stockData.length === 0) return generatePastDays(60); const dates = stockData.map(r => new Date(r.date).getTime()).filter(t => !isNaN(t)); if (dates.length === 0) return generatePastDays(60); let curr = new Date(new Date(Math.min(...dates)).getFullYear(), new Date(Math.min(...dates)).getMonth(), 1), end = new Date(new Date(Math.max(...dates)).getFullYear(), new Date(Math.max(...dates)).getMonth() + 1, 0); while (curr <= end) { arr.push({ fullDate: `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`, shortDate: `${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`, rawMonth: curr.getMonth() + 1, rawYear: curr.getFullYear() }); curr.setDate(curr.getDate() + 1); } } else { let curr = new Date(year, month - 1, 1), end = new Date(year, month, 0); while (curr <= end) { arr.push({ fullDate: `${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`, shortDate: `${String(curr.getMonth() + 1).padStart(2, '0')}-${String(curr.getDate()).padStart(2, '0')}`, rawMonth: curr.getMonth() + 1, rawYear: curr.getFullYear() }); curr.setDate(curr.getDate() + 1); } } return arr; }
+        function generatePastDays(n) { const arr = []; for (let i = n - 1; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); arr.push({ fullDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, shortDate: `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, rawMonth: d.getMonth() + 1, rawYear: d.getFullYear() }); } return arr; }
+        function populateYearSelect() { const select = document.getElementById('heatmapYearSelect'); if (!select) return; const currentYear = new Date().getFullYear(), years = new Set([currentYear, currentYear - 1, currentYear + 1]); stockData.forEach(r => { if (r.date) { const y = new Date(r.date).getFullYear(); if (!isNaN(y)) years.add(y); } }); select.innerHTML = ""; Array.from(years).sort((a,b) => b - a).forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = `${y}年`; if (y === currentYear) opt.selected = true; select.appendChild(opt); }); }
+        function updateTrackerSelect() { const selectL1 = document.getElementById('trackerLevel1Select'); if (!selectL1) return; const currentSelectedL1 = selectL1.value; selectL1.innerHTML = '<option value="">- 一级热点 (全部) -</option>'; [...new Set(stockData.map(r => r.level1).filter(Boolean))].sort().forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; if (name === currentSelectedL1) opt.selected = true; selectL1.appendChild(opt); }); updateLevel2Select(); }
+        function updateLevel2Select() { const selectL1 = document.getElementById('trackerLevel1Select'), selectL2 = document.getElementById('trackerLevel2Select'); if (!selectL1 || !selectL2) return; const selectedL1 = selectL1.value, currentSelectedL2 = selectL2.value; selectL2.innerHTML = '<option value="">- 二级热点 (全部) -</option>'; let records = selectedL1 ? stockData.filter(r => r.level1 === selectedL1) : stockData, preserveSelected = false; [...new Set(records.map(r => r.level2).filter(Boolean))].sort().forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; if (name === currentSelectedL2) { opt.selected = true; preserveSelected = true; } selectL2.appendChild(opt); }); if (!preserveSelected) selectL2.value = ""; }
+        function onTrackerChanged() { updateLevel2Select(); renderHeatmap(); }
+        function resetTracker() { const t1 = document.getElementById('trackerLevel1Select'), t2 = document.getElementById('trackerLevel2Select'); if (t1) t1.value = ""; if (t2) t2.value = ""; renderHeatmap(); updateLevel2Select(); }
+        function onHeatmapDateControlChanged() { renderHeatmap(); }
+        function renderHeatmap() { const grid = document.getElementById('heatmapGrid'); if (!grid) return; grid.innerHTML = ""; const trackerL1 = document.getElementById('trackerLevel1Select'), trackerL2 = document.getElementById('trackerLevel2Select'), selectedL1 = trackerL1 ? trackerL1.value : "", selectedL2 = trackerL2 ? trackerL2.value : "", isTracking = selectedL1 !== "" || selectedL2 !== "", yearSel = document.getElementById('heatmapYearSelect'), monthSel = document.getElementById('heatmapMonthSelect'), selectedYear = yearSel ? parseInt(yearSel.value) : new Date().getFullYear(), selectedMonth = monthSel ? parseInt(monthSel.value) : new Date().getMonth() + 1; if (isTracking) { if (yearSel) { yearSel.disabled = true; yearSel.classList.add('opacity-40'); } if (monthSel) { monthSel.disabled = true; monthSel.classList.add('opacity-40'); } } else { if (yearSel) { yearSel.disabled = false; yearSel.classList.remove('opacity-40'); } if (monthSel) { monthSel.disabled = false; monthSel.classList.remove('opacity-40'); } } const subTitle = document.getElementById('heatmapSubtitle'), legendInfo = document.getElementById('legendInfo'); if (isTracking) { let trackInfoText = "🎯 全时间轴大爆发透视："; if (selectedL1 && selectedL2) trackInfoText += `<span class="text-red-400 font-bold">一级:"${selectedL1}" + 二级:"${selectedL2}"</span>`; else if (selectedL1) trackInfoText += `<span class="text-orange-400 font-bold">一级:"${selectedL1}"</span>`; else trackInfoText += `<span class="text-yellow-400 font-bold">二级:"${selectedL2}"</span>`; if (subTitle) subTitle.innerHTML = trackInfoText; if (legendInfo) legendInfo.textContent = "目标题材爆发历史与强度"; } else { if (subTitle) subTitle.innerHTML = `📅 常观模式。方块显示本日<span class="text-red-400 font-bold">最高题材强度等级</span>。`; if (legendInfo) legendInfo.textContent = "综合最高题材爆发温度"; } getTimelineDays(selectedYear, selectedMonth, isTracking).forEach(day => { const dayRecords = stockData.filter(r => r.date === day.fullDate), count = dayRecords.length, cell = document.createElement('div'); cell.className = "w-11 h-11 rounded-lg border heatmap-cell cursor-pointer flex flex-col justify-between p-1"; cell.setAttribute('data-date', day.fullDate); let bgClass = "bg-slate-800/40 border-slate-700/30 text-slate-500"; if (count > 0) { if (isTracking) { const matchedRec = dayRecords.find(r => (!selectedL1 || r.level1 === selectedL1) && (!selectedL2 || r.level2 === selectedL2)); if (matchedRec) { if (matchedRec.intensity === "超强") bgClass = "bg-red-600 border-red-400/60 shadow-[0_0_10px_rgba(220,38,38,0.4)] text-white"; else if (matchedRec.intensity === "强") bgClass = "bg-orange-500 border-orange-300/60 shadow-[0_0_10px_rgba(249,115,22,0.4)] text-white"; else bgClass = "bg-yellow-500 border-yellow-300/60 shadow-[0_0_10px_rgba(234,179,8,0.4)] text-slate-950"; } } else { const intensities = dayRecords.map(r => r.intensity); if (intensities.includes("超强")) bgClass = "bg-red-600 border-red-400/50 shadow-[0_0_8px_rgba(220,38,38,0.3)] text-white"; else if (intensities.includes("强")) bgClass = "bg-orange-500 border-orange-300/50 shadow-[0_0_8px_rgba(249,115,22,0.3)] text-white"; else if (intensities.includes("一般")) bgClass = "bg-yellow-500 border-yellow-300/50 shadow-[0_0_8px_rgba(234,179,8,0.3)] text-slate-950"; } } cell.className += ` ${bgClass}`; cell.innerHTML = `<span class="text-[9px] scale-90 origin-top-left opacity-60 font-mono-custom font-semibold">${day.shortDate.split('-')[1]}</span>${count > 0 ? `<span class="text-[10px] self-end font-extrabold opacity-95">${count}</span>` : ''}`; cell.onclick = () => selectDate(day.fullDate); grid.appendChild(cell); }); }
+        function selectDate(dateString) { activeDate = dateString; const datePicker = document.getElementById('datePicker'); if (datePicker) datePicker.value = dateString; const currentDateTitle = document.getElementById('currentDateTitle'); if (currentDateTitle) currentDateTitle.innerHTML = `选定交易日：<span class="text-emerald-400 font-bold">${dateString}</span>`; const dayRecords = stockData.filter(r => r.date === dateString), listContainer = document.getElementById('dailyHotspotsList'), badge = document.getElementById('hotspotCountBadge'); if (listContainer) listContainer.innerHTML = ""; if (badge) badge.textContent = `${dayRecords.length} 个`; if (dayRecords.length === 0) { if (listContainer) listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">该交易日暂无题材记录。</div>`; return; } dayRecords.forEach((rec, idx) => { let colLabel = rec.intensity === "超强" ? "text-red-400" : (rec.intensity === "强" ? "text-orange-400" : "text-yellow-400"); const btn = document.createElement('button'); btn.className = `w-full text-left p-3 rounded-xl border transition-all flex flex-col justify-between ${idx === activeHotspotIndex ? 'bg-slate-700/60 border-emerald-500/80 text-emerald-300' : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-800/80 text-slate-300'}`; btn.innerHTML = `<div class="flex justify-between items-center w-full"><span class="font-bold text-sm truncate">${rec.level2} <span class="text-xs font-normal text-slate-400">(${rec.level1})</span></span><span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${colLabel} bg-slate-900 border border-slate-800">${rec.intensity}</span></div><p class="text-xs text-slate-400 truncate w-full mt-1.5">${rec.hotspotAnalysis}</p>`; btn.onclick = () => { activeHotspotIndex = idx; renderDetailPanel(rec); selectDate(dateString); }; if (listContainer) listContainer.appendChild(btn); }); if (dayRecords[activeHotspotIndex]) { renderDetailPanel(dayRecords[activeHotspotIndex]); } else { activeHotspotIndex = 0; renderDetailPanel(dayRecords[0]); } }
+        function onDateChanged() { const date = document.getElementById('datePicker').value; if (date) { activeHotspotIndex = 0; selectDate(date); } }
+        function renderDetailPanel(record) { if (!record) return; const nameEl = document.getElementById('detailHotspotName'), l1El = document.getElementById('detailHotspotL1'), dateEl = document.getElementById('detailDate'), analysisEl = document.getElementById('detailHotspotAnalysis'), intensityTag = document.getElementById('detailHotspotIntensity'), leadersGrid = document.getElementById('detailLeadersGrid'); if (nameEl) nameEl.textContent = record.level2; if (l1El) l1El.textContent = `一级分类: ${record.level1 || '--'}`; if (dateEl) dateEl.textContent = `研报归档日期: ${record.date}`; if (analysisEl) analysisEl.textContent = record.hotspotAnalysis || '--'; if (intensityTag) { intensityTag.className = "text-xs font-semibold px-2 py-0.5 rounded"; intensityTag.textContent = `强度: ${record.intensity}`; if (record.intensity === "超强") intensityTag.className += " bg-red-500/20 text-red-400 border border-red-500/30"; else if (record.intensity === "强") intensityTag.className += " bg-orange-500/20 text-orange-400 border border-orange-500/30"; else intensityTag.className += " bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"; } if (leadersGrid) { leadersGrid.innerHTML = ""; if (!record.leaders || record.leaders.length === 0) { leadersGrid.innerHTML = `<div class="col-span-2 text-center py-6 text-slate-500 text-xs">本日该题材未标注任何龙头股。</div>`; return; } record.leaders.forEach((l, idx) => { const cache = stockPriceCache[l.code]; let priceSectionHTML = ""; if (cache && cache.timestamp > 0) { if (typeof cache.currentPrice === 'number' && cache.currentPrice !== null) { const priceColor = cache.dailyChangePercent >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold", changeSign = cache.dailyChangePercent >= 0 ? "+" : ""; let fiveDayHTML = ""; if (typeof cache.fiveDayChangePercent === 'number') { const fdColor = cache.fiveDayChangePercent >= 0 ? "text-red-500" : "text-green-500", fdSign = cache.fiveDayChangePercent >= 0 ? "+" : ""; fiveDayHTML = `<div><span class="block text-[9px] text-slate-400 font-semibold">5日涨幅</span><span class="text-xs font-bold ${fdColor}">${fdSign}${cache.fiveDayChangePercent.toFixed(2)}%</span></div>`; } else { fiveDayHTML = `<div><span class="block text-[9px] text-slate-400 font-semibold">5日涨幅</span><span class="text-xs font-bold text-slate-500">--</span></div>`; } const pullback = typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0 ? ((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100 : 0, pullbackColor = pullback >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold"; priceSectionHTML = `<div class="mt-3 pt-3 border-t border-slate-700/50 grid grid-cols-4 gap-1.5 text-center font-mono-custom"><div><span class="block text-[9px] text-slate-400 font-semibold">当前价</span><span class="text-xs ${priceColor}">${cache.currentPrice.toFixed(2)}</span></div><div><span class="block text-[9px] text-slate-400 font-semibold">日涨幅</span><span class="text-xs ${priceColor}">${changeSign}${typeof cache.dailyChangePercent === 'number' ? cache.dailyChangePercent.toFixed(2) : '0.00'}%</span></div>${fiveDayHTML}<div><span class="block text-[9px] text-slate-400 font-semibold">1月最高</span><span class="text-xs font-bold text-slate-200">${typeof cache.oneMonthHigh === 'number' ? cache.oneMonthHigh.toFixed(2) : '--'}</span></div></div><div class="mt-2 flex flex-col gap-1 text-[10px]"><div class="flex justify-between items-center"><span class="text-slate-500 font-mono-custom"></span><span class="inline-block px-2 py-0.5 rounded bg-slate-900 border border-slate-700 ${pullbackColor} font-semibold">回撤: ${pullback.toFixed(1)}%</span></div></div>`; } else { priceSectionHTML = `<div class="mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-500 text-center py-1">状态异常(退市/停牌)</div>`; } } else { priceSectionHTML = `<div class="mt-3 pt-3 border-t border-slate-700/40 flex justify-between items-center text-xs"><span class="text-slate-500 animate-pulse text-[10px]">📡 待获取...</span><button id="detail-btn-${l.code}" onclick="diagnoseSingleStock('${l.name}', '${l.code}', 'detail', false, 'dragon').then(()=>selectDate('${record.date}'))" class="px-2.5 py-1 bg-slate-700 text-[10px] rounded hover:text-white hover:bg-slate-600 transition-all">⚡ 同步</button><span id="detail-spin-${l.code}" class="hidden text-emerald-400 text-[10px] animate-pulse">📡...</span></div>`; } const card = document.createElement('div'); card.className = "p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 relative overflow-hidden flex flex-col justify-between group"; card.innerHTML = `<div><div class="flex justify-between items-start mb-2"><div class="flex items-center gap-1.5"><span class="text-xs font-bold px-2 py-0.5 bg-slate-700 text-emerald-400 rounded font-mono-custom">No.${idx + 1}</span><h4 class="text-sm font-bold text-emerald-400 inline-block cursor-pointer hover:underline" onclick="jumpToDatabaseAndFilter('${l.code}', '${l.name}')" title="点击跳转至全量库定位该股">${l.name}</h4></div><div class="flex items-center gap-2"><button class="text-xs text-emerald-500 hover:text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" onclick="openEditStockModal('${record.date}','${record.level2}','${l.code}')">编辑</button><span class="text-[10px] text-slate-400 font-mono-custom bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${l.code}</span></div></div><p class="text-xs text-slate-300 leading-relaxed whitespace-normal break-words">${l.analysis || '--'}</p></div>${priceSectionHTML}`; leadersGrid.appendChild(card); }); } }
+
+        // --- 6. Watchlist Render ---
+        function toggleWatchlist(name, code) { const index = watchlistData.findIndex(item => item.code === code); if (index !== -1) { watchlistData.splice(index, 1); showToast(`已取消关注【${name}】`); } else { watchlistData.push({ name, code }); showToast(`已关注【${name}】`); } localStorage.setItem('stockWatchlist', JSON.stringify(watchlistData)); const currentTab = document.getElementById('tab-dragon').classList.contains('hidden') ? 'database' : 'dragon'; if(currentTab === 'dragon') renderDragonPool(); else renderDatabasePool(); if(!document.getElementById('tab-dashboard').classList.contains('hidden')) renderWatchlist(); }
+        async function refreshWatchlistPrices(silent = false) { if(watchlistData.length === 0) return !silent && showToast("关注池为空！", "error"); if(!silent) showToast("🚀 极速关注池同步中...", "success"); 
+            const codes = [...new Set(watchlistData.map(c => c.code))];
+            for (let i = 0; i < codes.length; i += 50) { const chunk = codes.slice(i, i + 50); const quotes = await fetchTencentBatchQuotes(chunk); for (const code of chunk) { if (quotes[code]) { const parts = quotes[code].split('~'); let curPrice = parseFloat(parts[3]), yesterday = parseFloat(parts[4]); if (curPrice === 0 && yesterday > 0) curPrice = yesterday; let changePct = parseFloat(parts[32]); if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) changePct = ((curPrice - yesterday) / yesterday) * 100; if (!stockPriceCache[code]) stockPriceCache[code] = {}; stockPriceCache[code].currentPrice = curPrice; stockPriceCache[code].dailyChangePercent = changePct; stockPriceCache[code].timestamp = Date.now(); } } renderWatchlist(); }
+            await runWithConcurrency(codes.map(code => async () => { const klines = await fetchTencentKline(code); if (klines.length > 0) { const cache = stockPriceCache[code] || {}; const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]); let oneMonthHigh = currentPrice, limitUpCount10 = 0; const t_5_index = Math.max(0, klines.length - 6), t_5_close = parseFloat(klines[t_5_index][2]); if (currentPrice > 0 && t_5_close > 0) cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100; klines.slice(-22).forEach(k => { const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h; }); cache.oneMonthHigh = oneMonthHigh; const name = watchlistData.find(c => c.code === code)?.name || ""; let limitUpThreshold = name.includes('ST') ? 0.049 : (code.startsWith('30')||code.startsWith('688') ? 0.199 : (code.startsWith('83')||code.startsWith('87')||code.startsWith('88')||code.startsWith('43')||code.startsWith('92') ? 0.299 : 0.099)); const last11 = klines.slice(-11); for (let j = 1; j < last11.length; j++) { const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]); if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++; } cache.limitUpCount10 = limitUpCount10; if (klines.length >= 20) { let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2])); cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02; } const lastK = klines[klines.length-1], o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]); const bodyRatio = Math.abs(c-o)/o, isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c)); const volSlice = klines.slice(-21, -1); let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }}); cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5); cache.macdDiv = cache.macdDiv || []; stockPriceCache[code] = cache; } }), 4);
+            localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache)); renderWatchlist(); if(!silent) showToast(`关注池全量同步完毕！`, "success");
+        }
+        async function refreshCurrentHotspotPrices(silent = false) { const dayRecords = stockData.filter(r => r.date === activeDate), activeRecord = dayRecords[activeHotspotIndex]; if (!activeRecord || !activeRecord.leaders) return !silent && showToast("未选中有效题材！", "error"); if(!silent) showToast("🚀 正在极速同步龙头标的...", "success"); 
+            const codes = [...new Set(activeRecord.leaders.map(c => c.code))];
+            for (let i = 0; i < codes.length; i += 50) { const chunk = codes.slice(i, i + 50); const quotes = await fetchTencentBatchQuotes(chunk); for (const code of chunk) { if (quotes[code]) { const parts = quotes[code].split('~'); let curPrice = parseFloat(parts[3]), yesterday = parseFloat(parts[4]); if (curPrice === 0 && yesterday > 0) curPrice = yesterday; let changePct = parseFloat(parts[32]); if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) changePct = ((curPrice - yesterday) / yesterday) * 100; if (!stockPriceCache[code]) stockPriceCache[code] = {}; stockPriceCache[code].currentPrice = curPrice; stockPriceCache[code].dailyChangePercent = changePct; stockPriceCache[code].timestamp = Date.now(); } } selectDate(activeDate); }
+            await runWithConcurrency(codes.map(code => async () => { const klines = await fetchTencentKline(code); if (klines.length > 0) { const cache = stockPriceCache[code] || {}; const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]); let oneMonthHigh = currentPrice, limitUpCount10 = 0; const t_5_index = Math.max(0, klines.length - 6), t_5_close = parseFloat(klines[t_5_index][2]); if (currentPrice > 0 && t_5_close > 0) cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100; klines.slice(-22).forEach(k => { const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h; }); cache.oneMonthHigh = oneMonthHigh; const name = activeRecord.leaders.find(c => c.code === code)?.name || ""; let limitUpThreshold = name.includes('ST') ? 0.049 : (code.startsWith('30')||code.startsWith('688') ? 0.199 : (code.startsWith('83')||code.startsWith('87')||code.startsWith('88')||code.startsWith('43')||code.startsWith('92') ? 0.299 : 0.099)); const last11 = klines.slice(-11); for (let j = 1; j < last11.length; j++) { const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]); if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++; } cache.limitUpCount10 = limitUpCount10; if (klines.length >= 20) { let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2])); cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02; } const lastK = klines[klines.length-1], o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]); const bodyRatio = Math.abs(c-o)/o, isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c)); const volSlice = klines.slice(-21, -1); let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }}); cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5); cache.macdDiv = cache.macdDiv || []; stockPriceCache[code] = cache; } }), 4);
+            localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache)); selectDate(activeDate);
+        }
+        function renderWatchlist() { const container = document.getElementById('watchlistContainer'); if(!container) return; container.innerHTML = ""; if(watchlistData.length === 0) { container.innerHTML = `<div class="col-span-full text-center py-6 text-emerald-700/50 text-xs font-semibold">暂无关注个股。</div>`; return; } watchlistData.forEach(item => { const cache = stockPriceCache[item.code]; let priceSectionHTML = ""; if (cache && cache.timestamp > 0) { if (typeof cache.currentPrice === 'number' && cache.currentPrice !== null) { const priceColor = cache.dailyChangePercent >= 0 ? "text-red-500" : "text-green-500", changeSign = cache.dailyChangePercent >= 0 ? "+" : "", pb = typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0 ? ((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100 : 0, pbColor = pb >= 0 ? "text-red-500" : "text-green-500", dojiBadge = cache.isDoji ? `<span class="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500 text-cyan-400 text-[9px] font-bold animate-pulse">💎 星</span>` : "", sig = typeof cache.oneMonthHigh === 'number' ? getDragonSignal(pb, cache.isDoji, cache.isNearMA20, cache.macdDiv) : {label: "无信号", class: ""}; let signalBadge = ""; if(sig.label.includes('MACD') || sig.label.includes('买点') || sig.label.includes('十字星')) { signalBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] border ${sig.class} truncate max-w-[80px]" title="${sig.label}">${sig.label}</span>`; } priceSectionHTML = `<div class="flex justify-between items-end mt-2"><div><span class="text-lg font-bold ${priceColor} font-mono-custom">${cache.currentPrice.toFixed(2)}</span><span class="text-[10px] ${priceColor} font-mono-custom ml-1">${changeSign}${typeof cache.dailyChangePercent === 'number' ? cache.dailyChangePercent.toFixed(2) : '0.00'}%</span></div><div class="text-right"><div class="text-[9px] text-slate-400">回撤: <span class="${pbColor} font-bold">${pb.toFixed(1)}%</span></div></div></div><div class="flex items-center gap-1 mt-1.5 h-4">${dojiBadge} ${signalBadge}</div>`; } else { priceSectionHTML = `<div class="mt-2 text-xs text-slate-500 text-center">状态异常</div>`; } } else { priceSectionHTML = `<div class="mt-2 text-xs text-slate-500 flex justify-between items-center"><span class="animate-pulse">📡 待同步...</span> <button id="watch-btn-${item.code}" onclick="diagnoseSingleStock('${item.name}', '${item.code}', 'watch', false, 'dragon').then(()=>renderWatchlist())" class="px-2 py-0.5 bg-slate-700 text-[10px] rounded hover:text-white transition-all">同步</button><span id="watch-spin-${item.code}" class="hidden text-emerald-400 text-[10px] animate-pulse">📡...</span></div>`; } const card = document.createElement('div'); card.className = "p-3 rounded-xl bg-[#0f172a] border border-emerald-900/30 hover:border-emerald-700/50 transition-all relative group"; card.innerHTML = `<div class="flex justify-between items-start"><div><h4 class="text-sm font-bold text-emerald-400 cursor-pointer hover:underline" onclick="jumpToDatabaseAndFilter('${item.code}', '${item.name}')" title="点击跳转至全量库定位该股">${item.name}</h4><span class="text-[9px] text-slate-500 font-mono-custom">${item.code}</span></div><button onclick="toggleWatchlist('${item.name}', '${item.code}')" class="text-slate-500 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all">✕</button></div>${priceSectionHTML}`; container.appendChild(card); }); }
+
+        // --- 7. Table Filters & Sorts ---
+        function scanDatabaseCandidates() { const list = []; stockData.forEach(rec => { if (rec.leaders) rec.leaders.forEach(l => { list.push({ date: rec.date, level1: rec.level1, level1Analysis: rec.level1Analysis, level2: rec.level2, intensity: rec.intensity, hotspotAnalysis: rec.hotspotAnalysis, name: l.name, code: l.code, analysis: l.analysis }); }); }); return list; }
+        function scanDragonCandidates() { const list = []; const seen = new Set(); stockData.forEach(rec => { if (rec.leaders) rec.leaders.forEach(l => { if (!seen.has(l.code)) { seen.add(l.code); list.push({ name: l.name, code: l.code, level1: rec.level1, level2: rec.level2, intensity: rec.intensity, date: rec.date, analysis: l.analysis }); } }); }); return list; }
+        function getDragonSignal(pullback, isDoji, isNearMA20, macdDiv = []) { if (macdDiv && macdDiv.length > 0) return { label: `🌟 MACD底背离 (${macdDiv.join(',')})`, class: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/40 animate-pulse font-bold" }; if (isDoji && pullback <= -15 && pullback >= -35) return { label: "💎 极度缩量二波星", class: "bg-cyan-500/10 text-cyan-400 border-cyan-500/40 animate-pulse" }; if (pullback <= -15 && pullback >= -35) return { label: "🔥 龙回头黄金买点", class: "bg-emerald-500/10 text-emerald-400 border-emerald-500/40" }; if (pullback > -15 && pullback <= -5) return { label: "📈 强势洗盘观察", class: "bg-orange-500/10 text-orange-400 border-orange-500/40" }; if (pullback < -35) return { label: "⚠️ 极深回调试探", class: "bg-yellow-500/10 text-yellow-400 border-yellow-500/40" }; if (isNearMA20) return { label: "🎯 接近20日均线", class: "bg-purple-500/10 text-purple-400 border-purple-500/40 animate-pulse" }; return { label: "⏳ 震荡平稳蓄势", class: "bg-slate-800/40 text-slate-400 border-slate-700/50" }; }
+        function getRowDisplayValue(candidate, field, mode = 'dragon') { const cache = stockPriceCache[candidate.code]; switch (field) { case 'level1': return candidate.level1 || "--"; case 'level1Analysis': return candidate.level1Analysis || "--"; case 'level2': return candidate.level2; case 'hotspotAnalysis': return candidate.hotspotAnalysis || "--"; case 'name': return candidate.name; case 'date': return mode === 'dragon' ? candidate.level2 : candidate.date; case 'intensity': return candidate.intensity; case 'analysis': return candidate.analysis || "--"; case 'limitUpCount10': return cache && cache.timestamp > 0 ? (cache.limitUpCount10 || 0) + "次" : "待诊断"; case 'currentPrice': return cache && cache.timestamp > 0 && typeof cache.currentPrice === 'number' && cache.currentPrice !== null ? cache.currentPrice.toFixed(2) + "元" : "待诊断"; case 'fiveDayChangePercent': return cache && cache.timestamp > 0 && typeof cache.fiveDayChangePercent === 'number' && cache.fiveDayChangePercent !== null ? cache.fiveDayChangePercent.toFixed(2) + "%" : "待诊断"; case 'pullback': if (cache && cache.timestamp > 0 && typeof cache.currentPrice === 'number' && typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0) return (((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100).toFixed(1) + "%"; return "待诊断"; case 'signal': if (cache && cache.timestamp > 0 && typeof cache.currentPrice === 'number' && typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0) return getDragonSignal((((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100), cache.isDoji, cache.isNearMA20, cache.macdDiv).label; return "待诊断"; default: return ""; } }
+        document.addEventListener('click', (e) => { if (activeInlineFilterId) { const filterMenu = document.getElementById(activeInlineFilterId), isToggleBtn = e.target.hasAttribute('onclick') && e.target.getAttribute('onclick').includes('toggleInlineFilter'); if (filterMenu && !filterMenu.contains(e.target) && !isToggleBtn) { filterMenu.classList.add('hidden'); activeInlineFilterId = null; } } });
+        function toggleInlineFilter(event, field, mode) { event.stopPropagation(); const menuId = `inline-filter-${mode}-${field}`, menu = document.getElementById(menuId); if (activeInlineFilterId === menuId) { menu.classList.add('hidden'); activeInlineFilterId = null; return; } if (activeInlineFilterId) { const activeMenu = document.getElementById(activeInlineFilterId); if (activeMenu) activeMenu.classList.add('hidden'); } currentFilterField = field; currentFilterMode = mode; const candidates = mode === 'dragon' ? scanDragonCandidates() : scanDatabaseCandidates(), uniqueValues = new Set(); candidates.forEach(c => uniqueValues.add(getRowDisplayValue(c, field, mode))); const sortedValues = Array.from(uniqueValues).sort((a, b) => { const numA = parseFloat(a), numB = parseFloat(b); if (!isNaN(numA) && !isNaN(numB)) return numA - numB; return String(a).localeCompare(String(b), 'zh'); }); let html = `<div class="flex justify-between items-center text-xs pb-2 border-b border-slate-700 select-none mb-2"><button type="button" onclick="selectAllInlineCheckboxes('${menuId}', true)" class="text-emerald-400 hover:text-emerald-300 font-semibold underline">全选</button><button type="button" onclick="selectAllInlineCheckboxes('${menuId}', false)" class="text-slate-400 hover:text-slate-300 font-semibold underline">清空</button></div><div class="max-h-48 overflow-y-auto no-scrollbar space-y-1">`; const currentActiveFilters = mode === 'dragon' ? columnFilters[field] : dbFilters[field]; sortedValues.forEach(val => { const isChecked = !currentActiveFilters || currentActiveFilters.length === 0 || currentActiveFilters.includes(val); html += `<label class="flex items-center gap-2 text-slate-300 text-xs hover:text-white cursor-pointer py-1 select-none"><input type="checkbox" value="${val}" ${isChecked ? 'checked' : ''} class="inline-filter-checkbox rounded bg-[#0f172a] border-slate-600 text-emerald-500 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"><span class="truncate max-w-[120px]" title="${val}">${val}</span></label>`; }); html += `</div><div class="flex justify-end gap-2 pt-2 mt-2 border-t border-slate-700"><button onclick="document.getElementById('${menuId}').classList.add('hidden'); activeInlineFilterId=null;" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded">取消</button><button onclick="submitInlineFilter('${menuId}')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] rounded">确定</button></div>`; menu.innerHTML = html; menu.classList.remove('hidden'); activeInlineFilterId = menuId; }
+        function selectAllInlineCheckboxes(menuId, status) { const menu = document.getElementById(menuId); if(menu) menu.querySelectorAll('.inline-filter-checkbox').forEach(cb => cb.checked = status); }
+        function submitInlineFilter(menuId) { const menu = document.getElementById(menuId); if(!menu) return; const checkboxes = menu.querySelectorAll('.inline-filter-checkbox'), selectedValues = [], allValues = []; checkboxes.forEach(cb => { allValues.push(cb.value); if (cb.checked) selectedValues.push(cb.value); }); let targetFilters = currentFilterMode === 'dragon' ? columnFilters : dbFilters; if (selectedValues.length === allValues.length || selectedValues.length === 0) targetFilters[currentFilterField] = []; else targetFilters[currentFilterField] = selectedValues; menu.classList.add('hidden'); activeInlineFilterId = null; if (currentFilterMode === 'dragon') renderDragonPool(); else renderDatabasePool(); }
+        function clearSingleFilter(field, mode = 'dragon') { if (mode === 'dragon') { columnFilters[field] = []; renderDragonPool(); } else { dbFilters[field] = []; renderDatabasePool(); } }
+
+        function renderDatabasePool() {
+            const body = document.getElementById('databasePoolTableBody'); if (!body) return; body.innerHTML = "";
+            const candidates = scanDatabaseCandidates(), searchInput = document.getElementById('dbSearchInput'), searchVal = searchInput ? searchInput.value.trim().toLowerCase() : "";
+            let filtered = candidates.filter(c => {
+                if (searchVal && !(c.name.toLowerCase().includes(searchVal) || c.code.includes(searchVal) || c.level2.toLowerCase().includes(searchVal) || (c.level1||"").toLowerCase().includes(searchVal) || (c.hotspotAnalysis||"").toLowerCase().includes(searchVal) || (c.analysis||"").toLowerCase().includes(searchVal))) return false;
+                for (let field of Object.keys(dbFilters)) { if (dbFilters[field] && dbFilters[field].length > 0) { if (!dbFilters[field].includes(getRowDisplayValue(c, field, 'database'))) return false; } } return true;
+            });
+            if (dbSortField) {
+                filtered.sort((a, b) => {
+                    const cacheA = stockPriceCache[a.code], cacheB = stockPriceCache[b.code]; let valA, valB;
+                    switch (dbSortField) { case 'level1': valA = a.level1 || ""; valB = b.level1 || ""; break; case 'level2': valA = a.level2; valB = b.level2; break; case 'level1Analysis': valA = a.level1Analysis || ""; valB = b.level1Analysis || ""; break; case 'hotspotAnalysis': valA = a.hotspotAnalysis || ""; valB = b.hotspotAnalysis || ""; break; case 'name': valA = a.name; valB = b.name; break; case 'analysis': valA = a.analysis || ""; valB = b.analysis || ""; break; case 'currentPrice': valA = cacheA && cacheA.currentPrice !== null && typeof cacheA.currentPrice === 'number' ? cacheA.currentPrice : -1; valB = cacheB && cacheB.currentPrice !== null && typeof cacheB.currentPrice === 'number' ? cacheB.currentPrice : -1; break; case 'fiveDayChangePercent': valA = cacheA && cacheA.fiveDayChangePercent !== null && typeof cacheA.fiveDayChangePercent === 'number' ? cacheA.fiveDayChangePercent : -999; valB = cacheB && cacheB.fiveDayChangePercent !== null && typeof cacheB.fiveDayChangePercent === 'number' ? cacheB.fiveDayChangePercent : -999; break; case 'pullback': valA = cacheA && cacheA.currentPrice !== null && typeof cacheA.currentPrice === 'number' && cacheA.oneMonthHigh ? ((cacheA.currentPrice - cacheA.oneMonthHigh) / cacheA.oneMonthHigh) : -100; valB = cacheB && cacheB.currentPrice !== null && typeof cacheB.currentPrice === 'number' && cacheB.oneMonthHigh ? ((cacheB.currentPrice - cacheB.oneMonthHigh) / cacheB.oneMonthHigh) : -100; break; default: return 0; }
+                    if (valA < valB) return dbSortAsc ? -1 : 1; if (valA > valB) return dbSortAsc ? 1 : -1; return 0;
+                });
+            }
+            if (filtered.length === 0) { body.innerHTML = `<tr><td colspan="10" class="py-12 text-center text-slate-500 text-sm">暂无符合条件的个股数据。</td></tr>`; updateFiltersBreadcrumbs(); return; }
+            filtered.forEach(c => {
+                const cache = stockPriceCache[c.code]; let currentPriceHTML = "--", fiveDayHTML = "--", pullbackHTML = "--";
+                if (cache && cache.timestamp > 0) {
+                    if (typeof cache.currentPrice === 'number' && cache.currentPrice !== null) {
+                        const priceColor = cache.dailyChangePercent >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold", changeSign = cache.dailyChangePercent >= 0 ? "+" : ""; currentPriceHTML = `<div class="font-bold ${priceColor}">${cache.currentPrice.toFixed(2)} <span class="text-[10px] font-normal">${changeSign}${(cache.dailyChangePercent || 0).toFixed(2)}%</span></div>`;
+                        if (typeof cache.fiveDayChangePercent === 'number' && cache.fiveDayChangePercent !== null) { const fdColor = cache.fiveDayChangePercent >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold", fdSign = cache.fiveDayChangePercent >= 0 ? "+" : ""; fiveDayHTML = `<span class="${fdColor} font-mono-custom">${fdSign}${cache.fiveDayChangePercent.toFixed(2)}%</span>`; }
+                        if (typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0) { const pb = ((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100, pbColor = pb >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold"; pullbackHTML = `<div class="font-bold ${pbColor} font-mono-custom">${pb.toFixed(1)}%</div>`; }
+                    } else { currentPriceHTML = `<span class="text-slate-500 text-[10px]">异常(停牌/未上市)</span>`; }
+                }
+                const isWatched = watchlistData.some(item => item.code === c.code), tr = document.createElement('tr'); tr.className = "hover:bg-slate-800/30 transition-all border-b border-slate-800/40 text-xs md:text-sm";
+                tr.innerHTML = `<td class="py-4 px-3 font-semibold text-slate-300 max-w-[120px] truncate" title="${c.level1||'--'}">${c.level1||"--"}</td><td class="py-4 px-3 text-slate-400 whitespace-normal break-words max-w-[180px] leading-relaxed text-[10px]">${c.level1Analysis||"--"}</td><td class="py-4 px-3 text-emerald-400 font-bold">${c.level2}</td><td class="py-4 px-3 text-slate-300 whitespace-normal break-words max-w-[200px] leading-relaxed text-[11px]">${c.hotspotAnalysis||"--"}</td><td class="py-4 px-3"><div class="font-bold text-slate-200">${c.name}</div><div class="text-[10px] text-slate-500 font-mono-custom">${c.code}</div></td><td class="py-4 px-3 text-slate-300 whitespace-normal break-words max-w-[180px] leading-relaxed text-[11px]">${c.analysis || "--"}</td><td class="py-4 px-3 font-mono-custom">${currentPriceHTML}</td><td class="py-4 px-3">${fiveDayHTML}</td><td class="py-4 px-3 font-mono-custom">${pullbackHTML}</td><td class="py-4 px-3 text-right space-x-1.5 min-w-[100px]"><button onclick="toggleWatchlist('${c.name}', '${c.code}')" class="text-[11px] font-medium transition-colors ${isWatched?'text-amber-400':'text-slate-500 hover:text-emerald-400'}">⭐</button><button onclick="diagnoseSingleStock('${c.name}', '${c.code}', 'db', false, 'db').then(()=>renderDatabasePool())" id="db-btn-${c.code}" class="text-[11px] text-emerald-400 hover:text-emerald-300 bg-emerald-900/20 px-2 py-1 rounded transition-all">诊断</button><span id="db-spin-${c.code}" class="hidden text-emerald-400 text-xs animate-pulse mx-1">...</span><button onclick="openEditStockModal('${c.date}', '${c.level2}', '${c.code}')" class="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-900/20 px-2 py-1 rounded">编辑</button><button onclick="deleteStockFromDatabase('${c.date}', '${c.code}')" class="text-[11px] text-red-400 hover:text-red-300 px-1 py-1 rounded">删除</button></td>`;
+                body.appendChild(tr);
+            });
+            updateSortIcons(); updateFiltersBreadcrumbs();
+        }
+
+        function renderDragonPool() {
+            const body = document.getElementById('dragonPoolTableBody'); if (!body) return; body.innerHTML = "";
+            const candidates = scanDragonCandidates(), searchInput = document.getElementById('dragonSearchInput'), searchVal = searchInput ? searchInput.value.trim().toLowerCase() : "", signalFilterSelect = document.getElementById('dragonSignalFilter'), signalFilter = signalFilterSelect ? signalFilterSelect.value : "";
+            let filtered = candidates.filter(c => {
+                if (searchVal && !(c.name.toLowerCase().includes(searchVal) || c.code.includes(searchVal) || c.level2.toLowerCase().includes(searchVal) || (c.level1||"").toLowerCase().includes(searchVal) || c.intensity.toLowerCase().includes(searchVal))) return false;
+                for (let field of Object.keys(columnFilters)) { if (columnFilters[field] && columnFilters[field].length > 0) { if (!columnFilters[field].includes(getRowDisplayValue(c, field, 'dragon'))) return false; } }
+                if (signalFilter) {
+                    const cache = stockPriceCache[c.code];
+                    if (signalFilter === "未诊断") { if (cache && cache.timestamp > 0) return false; } else {
+                        if (!cache || cache.timestamp === 0 || typeof cache.currentPrice !== 'number' || cache.currentPrice === null) return false;
+                        const pb = cache.oneMonthHigh ? ((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100 : 0;
+                        if (signalFilter === "MACD底背离") { if (!cache.macdDiv || cache.macdDiv.length === 0) return false; } else if (signalFilter === "极度缩量十字星") { if (!cache.isDoji) return false; } else if (signalFilter === "黄金买点") { if (!(pb <= -15 && pb >= -35)) return false; } else if (signalFilter === "接近20日线") { if (!cache.isNearMA20) return false; } else if (signalFilter === "强势洗盘") { if (!(pb > -15 && pb < -5)) return false; } else if (signalFilter === "支撑试探") { if (!(pb < -35)) return false; }
+                    }
+                } return true;
+            });
+            if (dragonSortField) {
+                filtered.sort((a, b) => {
+                    const cacheA = stockPriceCache[a.code], cacheB = stockPriceCache[b.code]; let valA, valB;
+                    switch (dragonSortField) {
+                        case 'name': valA = a.name; valB = b.name; break; case 'date': valA = a.date; valB = b.date; break; case 'intensity': valA = a.intensity; valB = b.intensity; break; case 'analysis': valA = a.analysis || ""; valB = b.analysis || ""; break; case 'limitUpCount10': valA = cacheA ? (cacheA.limitUpCount10 || 0) : -1; valB = cacheB ? (cacheB.limitUpCount10 || 0) : -1; break; case 'currentPrice': valA = cacheA && typeof cacheA.currentPrice === 'number' && cacheA.currentPrice !== null ? cacheA.currentPrice : -1; valB = cacheB && typeof cacheB.currentPrice === 'number' && cacheB.currentPrice !== null ? cacheB.currentPrice : -1; break; case 'fiveDayChangePercent': valA = cacheA && typeof cacheA.fiveDayChangePercent === 'number' && cacheA.fiveDayChangePercent !== null ? cacheA.fiveDayChangePercent : -999; valB = cacheB && typeof cacheB.fiveDayChangePercent === 'number' && cacheB.fiveDayChangePercent !== null ? cacheB.fiveDayChangePercent : -999; break; case 'pullback': valA = cacheA && typeof cacheA.currentPrice === 'number' && cacheA.currentPrice !== null && cacheA.oneMonthHigh ? ((cacheA.currentPrice - cacheA.oneMonthHigh) / cacheA.oneMonthHigh) : -100; valB = cacheB && typeof cacheB.currentPrice === 'number' && cacheB.currentPrice !== null && cacheB.oneMonthHigh ? ((cacheB.currentPrice - cacheB.oneMonthHigh) / cacheB.oneMonthHigh) : -100; break; case 'signal': valA = cacheA && typeof cacheA.currentPrice === 'number' && cacheA.currentPrice !== null && cacheA.oneMonthHigh ? getDragonSignal(((cacheA.currentPrice - cacheA.oneMonthHigh) / cacheA.oneMonthHigh)*100, cacheA.isDoji, cacheA.isNearMA20, cacheA.macdDiv).label : ""; valB = cacheB && typeof cacheB.currentPrice === 'number' && cacheB.currentPrice !== null && cacheB.oneMonthHigh ? getDragonSignal(((cacheB.currentPrice - cacheB.oneMonthHigh) / cacheB.oneMonthHigh)*100, cacheB.isDoji, cacheB.isNearMA20, cacheB.macdDiv).label : ""; break; default: return 0;
+                    }
+                    if (valA < valB) return dragonSortAsc ? -1 : 1; if (valA > valB) return dragonSortAsc ? 1 : -1; return 0;
+                });
+            }
+            if (filtered.length === 0) { body.innerHTML = `<tr><td colspan="10" class="py-12 text-center text-slate-500 text-sm">暂无符合条件的个股。</td></tr>`; return; }
+            filtered.forEach(c => {
+                const cache = stockPriceCache[c.code]; let currentPriceHTML = "--", fiveDayHTML = "--", pullbackHTML = "--", limitUpCountHTML = "--", signalBadgeHTML = `<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700 animate-pulse">⏳ 待诊断行情</span>`;
+                if (cache && cache.timestamp > 0) {
+                    if (typeof cache.currentPrice === 'number' && cache.currentPrice !== null) {
+                        const priceColor = cache.dailyChangePercent >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold", changeSign = cache.dailyChangePercent >= 0 ? "+" : ""; currentPriceHTML = `<div class="font-bold ${priceColor}">${cache.currentPrice.toFixed(2)} <span class="text-[10px] font-normal">${changeSign}${(cache.dailyChangePercent || 0).toFixed(2)}%</span></div>`;
+                        if (typeof cache.fiveDayChangePercent === 'number' && cache.fiveDayChangePercent !== null) { const fdColor = cache.fiveDayChangePercent >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold", fdSign = cache.fiveDayChangePercent >= 0 ? "+" : ""; fiveDayHTML = `<span class="${fdColor} font-mono-custom">${fdSign}${cache.fiveDayChangePercent.toFixed(2)}%</span>`; }
+                        if (typeof cache.oneMonthHigh === 'number' && cache.oneMonthHigh > 0) { const pb = ((cache.currentPrice - cache.oneMonthHigh) / cache.oneMonthHigh) * 100, pbColor = pb >= 0 ? "text-red-500 font-bold" : "text-green-500 font-bold"; pullbackHTML = `<div class="font-bold ${pbColor} font-mono-custom">${pb.toFixed(1)}%</div>`; const sig = getDragonSignal(pb, cache.isDoji, cache.isNearMA20, cache.macdDiv); signalBadgeHTML = `<span class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${sig.class}">${sig.label}</span>`; } else { signalBadgeHTML = `<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">无极值数据</span>`; }
+                        const count10 = cache.limitUpCount10 || 0; if (count10 > 0) limitUpCountHTML = `<span class="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20 font-bold font-mono">${count10}次</span>`; else limitUpCountHTML = `<span class="text-slate-500 font-mono">0次</span>`;
+                    } else { currentPriceHTML = `<span class="text-slate-500 text-[10px]">异常(停牌)</span>`; signalBadgeHTML = `<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">状态异常</span>`; }
+                }
+                const isWatched = watchlistData.some(item => item.code === c.code), tr = document.createElement('tr'); tr.className = "hover:bg-slate-800/30 transition-all border-b border-slate-800/40 text-xs md:text-sm";
+                tr.innerHTML = `<td class="py-4 px-4"><div onclick="jumpToDatabaseAndFilter('${c.code}', '${c.name}')" class="font-bold text-emerald-400 hover:text-emerald-300 cursor-pointer hover:underline transition-all" title="点击跳转至全量库定位该股">${c.name}</div><div class="text-[10px] text-slate-500 font-mono-custom">${c.code}</div></td><td class="py-4 px-4"><div class="text-xs font-semibold text-slate-300"><span class="text-emerald-400 font-bold">${c.level2}</span><span class="text-slate-500 font-normal">(${c.level1||'--'})</span></div><div class="text-[10px] text-slate-500 font-mono-custom">首爆: ${c.date}</div></td><td class="py-4 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/80">${c.intensity}</span></td><td class="py-4 px-4 text-xs text-slate-300 whitespace-normal break-words max-w-[240px] leading-relaxed">${c.analysis || "--"}</td><td class="py-4 px-4 font-mono-custom">${limitUpCountHTML}</td><td class="py-4 px-4 font-mono-custom">${currentPriceHTML}</td><td class="py-4 px-4 font-mono-custom">${fiveDayHTML}</td><td class="py-4 px-4 font-mono-custom">${pullbackHTML}</td><td class="py-4 px-4">${signalBadgeHTML}</td><td class="py-4 px-4 text-right space-x-2"><button onclick="toggleWatchlist('${c.name}', '${c.code}')" class="text-xs font-medium ${isWatched?'text-amber-400':'text-slate-500'}">⭐</button><button id="dragon-btn-${c.code}" onclick="diagnoseSingleStock('${c.name}', '${c.code}', 'dragon', false, 'dragon').then(() => renderDragonPool())" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded-lg border border-slate-700 hover:text-white transition-all ml-1">⚡ 诊断</button><span id="dragon-spin-${c.code}" class="hidden text-emerald-400 text-xs animate-pulse ml-1">📡...</span></td>`; body.appendChild(tr);
+            });
+            updateSortIcons(); updateFiltersBreadcrumbs();
+        }
+
+        function toggleDojiOnlyFilter() { dragonDojiOnlyFilter = !dragonDojiOnlyFilter; const btn = document.getElementById('dragonDojiFilterBtn'), signalFilter = document.getElementById('dragonSignalFilter'); if (btn) { if (dragonDojiOnlyFilter) { btn.className = "px-4 py-3 bg-cyan-600 text-white text-xs font-semibold rounded-xl border border-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)] flex items-center gap-1.5"; if(signalFilter) signalFilter.value = "极度缩量十字星"; } else { btn.className = "px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5"; if(signalFilter) signalFilter.value = ""; } } renderDragonPool(); }
+        function resetDragonFilters() { const searchInput = document.getElementById('dragonSearchInput'), signalFilter = document.getElementById('dragonSignalFilter'); if (searchInput) searchInput.value = ""; if (signalFilter) signalFilter.value = ""; dragonDojiOnlyFilter = false; Object.keys(columnFilters).forEach(k => columnFilters[k] = []); const btn = document.getElementById('dragonDojiFilterBtn'); if (btn) btn.className = "px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5"; renderDragonPool(); }
+        function resetDatabaseFilters() { const searchInput = document.getElementById('dbSearchInput'); if (searchInput) searchInput.value = ""; Object.keys(dbFilters).forEach(k => dbFilters[k] = []); renderDatabasePool(); }
+        function updateSortIcons() { const dragonFields = ['name', 'date', 'intensity', 'analysis', 'limitUpCount10', 'currentPrice', 'fiveDayChangePercent', 'pullback', 'signal']; dragonFields.forEach(f => { const el = document.getElementById(`dg-sort-icon-${f}`); if (el) el.textContent = (dragonSortField === f) ? (dragonSortAsc ? '↑' : '↓') : '↕'; }); const dbFields = ['level1', 'level1Analysis', 'level2', 'hotspotAnalysis', 'name', 'analysis', 'currentPrice', 'fiveDayChangePercent', 'pullback']; dbFields.forEach(f => { const el = document.getElementById(`db-sort-icon-${f}`); if (el) el.textContent = (dbSortField === f) ? (dbSortAsc ? '↑' : '↓') : '↕'; }); }
+        function updateFiltersBreadcrumbs() { const dragonContainer = document.getElementById('dragonActiveFiltersBreadcrumbs'); if (dragonContainer) { let hasFilters = false; dragonContainer.innerHTML = '<span class="text-slate-400 self-center">当前过滤:</span>'; Object.keys(columnFilters).forEach(f => { if (columnFilters[f] && columnFilters[f].length > 0) { hasFilters = true; const badge = document.createElement('span'); badge.className = "px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs flex items-center gap-1"; badge.innerHTML = `${f}: ${columnFilters[f].length}项 <button onclick="clearSingleFilter('${f}', 'dragon')" class="hover:text-red-400 ml-1">✕</button>`; dragonContainer.appendChild(badge); } }); if (hasFilters) dragonContainer.classList.remove('hidden'); else dragonContainer.classList.add('hidden'); } const dbContainer = document.getElementById('dbActiveFiltersBreadcrumbs'); if (dbContainer) { let hasFilters = false; dbContainer.innerHTML = '<span class="text-slate-400 self-center">当前过滤:</span>'; Object.keys(dbFilters).forEach(f => { if (dbFilters[f] && dbFilters[f].length > 0) { hasFilters = true; const badge = document.createElement('span'); badge.className = "px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs flex items-center gap-1"; badge.innerHTML = `${f}: ${dbFilters[f].length}项 <button onclick="clearSingleFilter('${f}', 'database')" class="hover:text-red-400 ml-1">✕</button>`; dbContainer.appendChild(badge); } }); if (hasFilters) dbContainer.classList.remove('hidden'); else dbContainer.classList.add('hidden'); } }
+        function sortDragonPool(field) { if (dragonSortField === field) { dragonSortAsc = !dragonSortAsc; } else { dragonSortField = field; dragonSortAsc = true; } renderDragonPool(); }
+        function sortDatabasePool(field) { if (dbSortField === field) { dbSortAsc = !dbSortAsc; } else { dbSortField = field; dbSortAsc = true; } renderDatabasePool(); }
+
+        // --- 批量并发引擎 ---
+        async function startBulkDiagnosticsDB(silent = false) {
+            const candidates = scanDatabaseCandidates(); if (candidates.length === 0) return;
+            
+            const uniqueCodes = [...new Set(candidates.map(c => c.code).filter(c => c && c !== '000000'))];
+            const total = uniqueCodes.length;
+            if (!silent) showToast(`🚀 极速批处理引擎已启动，正在获取 ${total} 只个股现价...`, "success");
+            
+            let successCnt = 0;
+            // 阶段一：每50个一包去腾讯拿现价（极快，几秒钟搞定）
+            for (let i = 0; i < total; i += 50) {
+                const chunk = uniqueCodes.slice(i, i + 50);
+                const quotes = await fetchTencentBatchQuotes(chunk);
+                for (const code of chunk) {
+                    if (quotes[code]) {
+                        const parts = quotes[code].split('~');
+                        let curPrice = parseFloat(parts[3]), yesterday = parseFloat(parts[4]);
+                        if (curPrice === 0 && yesterday > 0) curPrice = yesterday;
+                        let changePct = parseFloat(parts[32]);
+                        if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) changePct = ((curPrice - yesterday) / yesterday) * 100;
+                        if (!stockPriceCache[code]) stockPriceCache[code] = {};
+                        stockPriceCache[code].currentPrice = curPrice;
+                        stockPriceCache[code].dailyChangePercent = changePct;
+                        stockPriceCache[code].timestamp = Date.now();
+                        successCnt++;
+                    }
+                }
+                renderDatabasePool(); // 渐进渲染，用户能马上看到价格变化
+            }
+
+            // 阶段二：4并发去腾讯查历史K线算涨幅和回撤
+            let completed = 0;
+            const progressContainer = document.getElementById('dbDiagnosticProgressContainer'), percentText = document.getElementById('dbDiagnosticPercentText'), progressBar = document.getElementById('dbDiagnosticProgressBar');
+            if (progressContainer) progressContainer.classList.remove('hidden');
+
+            await runWithConcurrency(uniqueCodes.map(code => async () => {
+                const klines = await fetchTencentKline(code);
+                if (klines.length > 0) {
+                    const cache = stockPriceCache[code] || {};
+                    const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]);
+                    let oneMonthHigh = currentPrice, limitUpCount10 = 0;
+                    const t_5_index = Math.max(0, klines.length - 6), t_5_close = parseFloat(klines[t_5_index][2]);
+                    if (currentPrice > 0 && t_5_close > 0) cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100;
+                    klines.slice(-22).forEach(k => { const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h; });
+                    cache.oneMonthHigh = oneMonthHigh;
+                    const name = candidates.find(c => c.code === code)?.name || "";
+                    let limitUpThreshold = name.includes('ST') ? 0.049 : (code.startsWith('30')||code.startsWith('688') ? 0.199 : (code.startsWith('83')||code.startsWith('87')||code.startsWith('88')||code.startsWith('43')||code.startsWith('92') ? 0.299 : 0.099));
+                    const last11 = klines.slice(-11);
+                    for (let j = 1; j < last11.length; j++) { const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]); if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++; }
+                    cache.limitUpCount10 = limitUpCount10;
+                    if (klines.length >= 20) { let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2])); cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02; }
+                    const lastK = klines[klines.length-1], o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]);
+                    const bodyRatio = Math.abs(c-o)/o, isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c));
+                    const volSlice = klines.slice(-21, -1); let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }});
+                    cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5);
+                    cache.macdDiv = cache.macdDiv || [];
+                    stockPriceCache[code] = cache;
+                }
+                completed++;
+                const pct = Math.round((completed/total)*100);
+                if(percentText) percentText.textContent = pct + '%';
+                if(progressBar) progressBar.style.width = pct + '%';
+            }), 4);
+
+            localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache));
+            if (!silent) showToast(`✅ 全量库同步完毕！现价获取成功 ${successCnt}/${total}`, "success");
+            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 2000);
+            renderDatabasePool();
+        }
+
+        async function startBulkDiagnostics(silent = false) {
+            const candidates = scanDragonCandidates(); if (candidates.length === 0) return !silent && showToast("无候选股票，请先录入！", "error");
+            const progressContainer = document.getElementById('diagnosticProgressContainer'), percentText = document.getElementById('diagnosticPercentText'), progressBar = document.getElementById('diagnosticProgressBar');
+            if (progressContainer) progressContainer.classList.remove('hidden');
+            if (!silent) showToast("🚀 启动安全防封锁扫描队列！", "success");
+            
+            const uniqueCodes = [...new Set(candidates.map(c => c.code).filter(c => c && c !== '000000'))];
+            const total = uniqueCodes.length; let completed = 0, successCnt = 0;
+
+            for (let i = 0; i < total; i += 50) {
+                const chunk = uniqueCodes.slice(i, i + 50);
+                const quotes = await fetchTencentBatchQuotes(chunk);
+                for (const code of chunk) {
+                    if (quotes[code]) {
+                        const parts = quotes[code].split('~');
+                        let curPrice = parseFloat(parts[3]), yesterday = parseFloat(parts[4]);
+                        if (curPrice === 0 && yesterday > 0) curPrice = yesterday;
+                        let changePct = parseFloat(parts[32]);
+                        if ((isNaN(changePct) || changePct === 0) && curPrice > 0 && yesterday > 0) changePct = ((curPrice - yesterday) / yesterday) * 100;
+                        if (!stockPriceCache[code]) stockPriceCache[code] = {};
+                        stockPriceCache[code].currentPrice = curPrice;
+                        stockPriceCache[code].dailyChangePercent = changePct;
+                        stockPriceCache[code].timestamp = Date.now();
+                        successCnt++;
+                    }
+                }
+                renderDragonPool(); 
+            }
+            
+            await runWithConcurrency(uniqueCodes.map(code => async () => {
+                const klines = await fetchTencentKline(code);
+                if (klines.length > 0) {
+                    const cache = stockPriceCache[code] || {};
+                    const currentPrice = cache.currentPrice || parseFloat(klines[klines.length-1][2]);
+                    let oneMonthHigh = currentPrice, limitUpCount10 = 0;
+                    const t_5_index = Math.max(0, klines.length - 6), t_5_close = parseFloat(klines[t_5_index][2]);
+                    if (currentPrice > 0 && t_5_close > 0) cache.fiveDayChangePercent = ((currentPrice - t_5_close) / t_5_close) * 100;
+                    klines.slice(-22).forEach(k => { const h = parseFloat(k[3]); if (h > oneMonthHigh) oneMonthHigh = h; });
+                    cache.oneMonthHigh = oneMonthHigh;
+                    const name = candidates.find(c => c.code === code)?.name || "";
+                    let limitUpThreshold = name.includes('ST') ? 0.049 : (code.startsWith('30')||code.startsWith('688') ? 0.199 : (code.startsWith('83')||code.startsWith('87')||code.startsWith('88')||code.startsWith('43')||code.startsWith('92') ? 0.299 : 0.099));
+                    const last11 = klines.slice(-11);
+                    for (let j = 1; j < last11.length; j++) { const prevC = parseFloat(last11[j-1][2]), currC = parseFloat(last11[j][2]); if (prevC > 0 && ((currC - prevC)/prevC >= limitUpThreshold - 0.002)) limitUpCount10++; }
+                    cache.limitUpCount10 = limitUpCount10;
+                    if (klines.length >= 20) { let sum = 0; klines.slice(-20).forEach(k => sum += parseFloat(k[2])); cache.isNearMA20 = Math.abs(currentPrice - sum/20)/(sum/20) <= 0.02; }
+                    const lastK = klines[klines.length-1], o = parseFloat(lastK[1]), c = parseFloat(lastK[2]), h = parseFloat(lastK[3]), l = parseFloat(lastK[4]), v = parseFloat(lastK[5]);
+                    const bodyRatio = Math.abs(c-o)/o, isDojiCandle = bodyRatio <= 0.02 && (h > Math.max(o, c) || l < Math.min(o, c));
+                    const volSlice = klines.slice(-21, -1); let sumV = 0, countV = 0; volSlice.forEach(k => { const pv = parseFloat(k[5]); if(!isNaN(pv)){ sumV+=pv; countV++; }});
+                    cache.isDoji = isDojiCandle && (countV>0) && v < ((sumV/countV)*0.5);
+                    cache.macdDiv = cache.macdDiv || [];
+                    stockPriceCache[code] = cache;
+                }
+                completed++;
+                const pct = Math.round((completed/total)*100);
+                if(percentText) percentText.textContent = pct + '%';
+                if(progressBar) progressBar.style.width = pct + '%';
+            }), 4);
+
+            localStorage.setItem('stockPriceCache', JSON.stringify(stockPriceCache));
+            if (!silent) showToast(`量化扫描完毕！成功获取现价 ${successCnt}/${total} 只个股。`, "success");
+            setTimeout(() => { if (progressContainer) progressContainer.classList.add('hidden'); }, 2000); renderDragonPool();
+        }
+
+        // --- 8. Data Entry & History ---
+        function saveRecord(e) { e.preventDefault(); const date = document.getElementById('formDate').value, level1 = document.getElementById('formLevel1').value.trim(), level1Analysis = document.getElementById('formLevel1Analysis').value.trim(), level2 = document.getElementById('formLevel2').value.trim(), intensity = document.getElementById('formIntensity').value, hotspotAnalysis = document.getElementById('formHotspotAnalysis').value.trim(); const leaders = [], container = document.getElementById('leadersInputContainer'), rows = container ? container.children : []; if (rows.length === 0) return showToast("请至少录入一个核心龙头个股！", "error"); for (let row of rows) { const name = row.querySelector('.leader-name-input').value.trim(), code = row.querySelector('.leader-code-input').value.trim(), analysis = row.querySelector('.leader-analysis-input').value.trim(); if (name && code) leaders.push({ name, code, analysis }); } const record = { date, level1, level1Analysis, level2, intensity, hotspotAnalysis, leaders }, existingIdx = stockData.findIndex(r => r.date === date && r.level2.toLowerCase() === level2.toLowerCase()); if (existingIdx !== -1) { stockData[existingIdx] = record; showToast("该题材研报已覆盖更新！"); } else { stockData.push(record); showToast("新题材研报建档成功！"); } synchronizeDatabase(record); stockData.sort((a, b) => new Date(b.date) - new Date(a.date)); localStorage.setItem('stockRecordsV2', JSON.stringify(stockData)); resetForm(); renderHistoryTable(); buildHistoryDatalists(); renderAll(); }
+        function renderHistoryTable() { const body = document.getElementById('historyTableBody'); if (!body) return; body.innerHTML = ""; if (stockData.length === 0) { body.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 text-sm">暂无数据，请录入。</td></tr>`; return; } stockData.forEach((rec) => { let intensityBadge = rec.intensity === "超强" ? "bg-red-500/20 text-red-400 border border-red-500/30" : (rec.intensity === "强" ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"); const tr = document.createElement('tr'); tr.className = "border-b border-slate-800 hover:bg-slate-800/40 text-xs"; tr.innerHTML = `<td class="py-3 px-4 font-mono text-center">${rec.date}</td><td class="py-3 px-4">${rec.level1||'--'}</td><td class="py-3 px-4 font-bold text-emerald-400">${rec.level2}</td><td class="py-3 px-4"><span class="px-2 py-0.5 rounded ${intensityBadge}">${rec.intensity}</span></td><td class="py-3 px-4 font-mono font-bold text-emerald-500">${rec.leaders?.length || 0}</td><td class="py-3 px-4 text-right"><button onclick="deleteRecord('${rec.date}', '${rec.level2}')" class="text-red-400 hover:text-red-300 underline font-medium">删除整组</button></td>`; body.appendChild(tr); }); }
+        function deleteRecord(date, level2) { openCustomConfirm("确认删除研报记录吗？", `确定要删除 ${date} 爆发的【${level2}】整组归档吗？不可撤销。`, () => { stockData = stockData.filter(r => !(r.date === date && r.level2 === level2)); localStorage.setItem('stockRecordsV2', JSON.stringify(stockData)); showToast("该热点分组已删除！", "success"); renderHistoryTable(); buildHistoryDatalists(); renderAll(); }); }
+        function clearAllData() { openCustomConfirm("⚠️ 危险操作：清空全量本地数据库", "此操作将抹除所有的题材分析与个股配置。是否确认清空？", () => { stockData = []; stockPriceCache = {}; watchlistData = []; localStorage.setItem('stockRecordsV2', JSON.stringify([])); localStorage.setItem('stockPriceCache', JSON.stringify({})); localStorage.setItem('stockWatchlist', JSON.stringify([])); showToast("全量数据库已清空！", "success"); renderHistoryTable(); buildHistoryDatalists(); renderAll(); }, true, true); }
+        function exportDatabaseExcel() { const candidates = scanDatabaseCandidates(); if (candidates.length === 0) return showToast("无数据导出！", "error"); const wsData = [["交易日期", "一级热点", "一级热点逻辑", "二级细分", "大涨强度", "二级细分逻辑", "标的名称", "证券代码", "个股逻辑"]]; candidates.forEach(c => wsData.push([c.date, c.level1 || "", c.level1Analysis || "", c.level2, c.intensity, c.hotspotAnalysis || "", c.name, c.code, c.analysis || ""])); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(wsData); ws['!cols'] = [{wch:12}, {wch:15}, {wch:35}, {wch:15}, {wch:10}, {wch:40}, {wch:12}, {wch:10}, {wch:35}]; XLSX.utils.book_append_sheet(wb, ws, "全量竖版库"); XLSX.writeFile(wb, `全量数据库_${new Date().toISOString().slice(0,10)}.xlsx`); showToast("全量库导出成功！"); }
+        function importDatabaseExcel(event) { const file = event.target.files[0]; if (!file) return; showToast("检测到文件，正在初始化读取进程...", "success"); const reader = new FileReader(); reader.onload = async function(e) { try { showToast("正在智能解析全量数据库并补全缺失代码，请勿关闭页面...", "success"); const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, { type: 'array' }); const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); if (rawRows.length < 2) throw new Error("数据行数不足或工作表为空"); const grouped = {}; let missingCodeCount = 0, fixedCodeCount = 0; let headerRowIndex = -1; let colMap = { date:-1, l1:-1, l1A:-1, l2:-1, int:-1, l2A:-1, name:-1, code:-1, analysis:-1 }; for (let i = 0; i < Math.min(rawRows.length, 15); i++) { const row = rawRows[i]; if (!row || !Array.isArray(row)) continue; const rowStr = row.join(''); if (rowStr.includes('名称') || rowStr.includes('代码') || rowStr.includes('热点') || rowStr.includes('日期')) { headerRowIndex = i; const findCol = (keys) => row.findIndex(h => typeof h === 'string' && keys.some(k => h.includes(k))); colMap.date = findCol(['日期', '时间', '交易日']); colMap.l1 = findCol(['一级热点', '大产业', '一级行业', '主线']); colMap.l1A = findCol(['一级逻辑', '一级热点逻辑', '产业逻辑']); colMap.l2 = findCol(['二级热点', '二级细分', '概念', '板块']); colMap.int = findCol(['强度', '大涨', '级别']); colMap.l2A = findCol(['二级逻辑', '热点逻辑', '细分逻辑', '核心解析', '板块解析']); colMap.name = findCol(['名称', '标的', '股票']); colMap.code = findCol(['代码', '证券']); colMap.analysis = findCol(['个股逻辑', '个股解析', '驱动分析', '逻辑']); break; } } if (headerRowIndex === -1) { headerRowIndex = 0; colMap = { date:0, l1:1, l1A:2, l2:3, int:4, l2A:5, name:6, code:7, analysis:8 }; } if (colMap.name === -1 && colMap.code === -1) throw new Error("未识别到【名称】或【代码】等关键列，请检查表头名。"); for (let r = headerRowIndex + 1; r < rawRows.length; r++) { const row = rawRows[r]; if (!row || row.length < 3) continue; let dateVal = colMap.date !== -1 ? row[colMap.date] : ""; if (typeof dateVal === 'number') { if(dateVal > 20000) { const dateObj = XLSX.SSF.parse_date_code(dateVal); dateVal = `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`; } else dateVal = ""; } else if (typeof dateVal === 'string') { dateVal = dateVal.replace(/\//g, '-').trim(); const parts = dateVal.split('-'); if(parts.length === 3) dateVal = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; } const level1 = colMap.l1 !== -1 ? String(row[colMap.l1] || "").trim() : ""; const level1Analysis = colMap.l1A !== -1 ? String(row[colMap.l1A] || "").trim() : ""; const level2 = colMap.l2 !== -1 ? String(row[colMap.l2] || "").trim() : "未分类热点"; const intensity = colMap.int !== -1 ? String(row[colMap.int] || "超强").trim() : "超强"; const hotspotAnalysis = colMap.l2A !== -1 ? String(row[colMap.l2A] || "").trim() : ""; const lName = colMap.name !== -1 ? String(row[colMap.name] || "").trim() : ""; const lAnalysis = colMap.analysis !== -1 ? String(row[colMap.analysis] || "").trim() : ""; let lCode = colMap.code !== -1 ? String(row[colMap.code] || "").trim() : ""; if (!dateVal || !lName) continue; const key = `${dateVal}_${level2.toLowerCase()}`; if (!grouped[key]) grouped[key] = { date: dateVal, level1, level1Analysis, level2, intensity, hotspotAnalysis, leaders: [] }; if (!lCode || lCode.length < 6 || lCode === "000000") { missingCodeCount++; const fetchedCode = await fetchStockCodeByName(lName); if (fetchedCode) { lCode = fetchedCode; fixedCodeCount++; } else { lCode = "000000"; } await new Promise(res => setTimeout(res, 50)); } stockData.forEach(oldRec => { if (oldRec.date === dateVal && oldRec.leaders) { oldRec.leaders = oldRec.leaders.filter(leader => leader.code !== lCode); } }); grouped[key].leaders.push({ name: lName, code: lCode || "000000", analysis: lAnalysis }); } Object.values(grouped).forEach(impRec => { const existIdx = stockData.findIndex(r => r.date === impRec.date && r.level2.toLowerCase() === impRec.level2.toLowerCase()); if (existIdx !== -1) stockData[existIdx] = impRec; else stockData.push(impRec); synchronizeDatabase(impRec); }); stockData = stockData.filter(r => r.leaders && r.leaders.length > 0); stockData.sort((a, b) => new Date(b.date) - new Date(a.date)); try { localStorage.setItem('stockRecordsV2', JSON.stringify(stockData)); } catch (storageErr) { throw new Error("浏览器本地存储空间已满(5MB限制)，请先前往历史记录删除部分旧数据！"); } let msg = `成功重组导入 ${Object.keys(grouped).length} 条主线！`; if (missingCodeCount > 0) msg += `自动补全代码 ${fixedCodeCount}/${missingCodeCount} 个。`; showToast(msg); renderAll(); renderDatabasePool(); renderDragonPool(); } catch (err) { console.error("Import Error:", err); showToast(`导入中止: ${err.message}`, "error"); } finally { event.target.value = ''; } }; reader.readAsArrayBuffer(file); }
+
+        function renderIndustryList() { const container = document.getElementById('industryListContainer'); if (!container) return; container.innerHTML = ""; const searchInput = document.getElementById('industrySearch'); const query = searchInput ? searchInput.value.trim().toLowerCase() : ""; const filtered = industryData.filter(ind => !query || ind.name.toLowerCase().includes(query) || (ind.content && ind.content.toLowerCase().includes(query))); if (filtered.length === 0) { container.innerHTML = `<div class="text-center py-4 text-xs text-slate-500">无匹配研报</div>`; return; } filtered.forEach((ind) => { const originalIndex = industryData.findIndex(i => i.id === ind.id); const btn = document.createElement('button'); btn.className = `w-full text-left px-3 py-2.5 rounded-xl border transition-all text-xs flex justify-between items-center ${originalIndex === activeIndustryIndex ? 'bg-slate-700/60 border-emerald-500/80 text-emerald-300 font-bold' : 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/80 text-slate-300'}`; btn.innerHTML = `<span class="truncate pr-1">⛓️ ${ind.name}</span>`; btn.onclick = () => { activeIndustryIndex = originalIndex; renderIndustryList(); loadActiveIndustry(); }; container.appendChild(btn); }); }
+        function loadActiveIndustry() { const ind = industryData[activeIndustryIndex]; if (!ind) return showDefaultIndustryState(); const titleInput = document.getElementById('industryTitleInput'); const richText = document.getElementById('industryRichText'); if (titleInput) titleInput.value = ind.name; if (richText) richText.innerHTML = ind.content || "<div>在这里开始编辑您的产业分析逻辑...</div>"; }
+        function showDefaultIndustryState() { const titleInput = document.getElementById('industryTitleInput'); const richText = document.getElementById('industryRichText'); if (titleInput) titleInput.value = ""; if (richText) richText.innerHTML = "<div>在这里开始编辑您的产业分析逻辑...</div>"; }
+        function createNewIndustry() { industryData.push({ id: `ind_` + Date.now(), name: "未命名新产业链研报", content: "<div>这里是富文本编辑区。</div>" }); activeIndustryIndex = industryData.length - 1; saveAndRefreshIndustryState(); showToast("创建成功！", "success"); }
+        function deleteCurrentIndustry() { const ind = industryData[activeIndustryIndex]; if (!ind) return; openCustomConfirm("确认删除研报吗？", `确定永久删除【${ind.name}】吗？`, () => { industryData.splice(activeIndustryIndex, 1); activeIndustryIndex = Math.max(0, industryData.length - 1); saveAndRefreshIndustryState(); showToast("研报已删除！", "success"); }); }
+        function execRichCommand(command, value = null) { document.execCommand(command, false, value); saveCurrentIndustryState(); }
+        function saveCurrentIndustryState() { const ind = industryData[activeIndustryIndex]; if (ind) { const titleInput = document.getElementById('industryTitleInput'); const richText = document.getElementById('industryRichText'); ind.name = titleInput ? titleInput.value.trim() || "未命名新产业链研报" : "未命名新产业链研报"; ind.content = richText ? richText.innerHTML : ""; localStorage.setItem('stockIndustryData', JSON.stringify(industryData)); renderIndustryList(); } }
+        function saveAndRefreshIndustryState() { localStorage.setItem('stockIndustryData', JSON.stringify(industryData)); renderIndustryList(); loadActiveIndustry(); }
+
+        function renderAll() { populateYearSelect(); const heatmapMonthSelect = document.getElementById('heatmapMonthSelect'); if (heatmapMonthSelect) heatmapMonthSelect.value = new Date().getMonth() + 1; renderHeatmap(); updateTrackerSelect(); renderIndustryList(); loadActiveIndustry(); if (stockData.length > 0) { selectDate(stockData[0].date); } else { const listContainer = document.getElementById('dailyHotspotsList'); if (listContainer) listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">暂无数据，请去“数据录入”建档。</div>`; const leadersGrid = document.getElementById('detailLeadersGrid'); if (leadersGrid) leadersGrid.innerHTML = ""; } }
+
+        window.onload = function() { resetForm(); buildHistoryDatalists(); renderAll(); renderWatchlist(); renderDatabasePool(); renderDragonPool(); };
+
+    </script>
+</body>
+</html>
