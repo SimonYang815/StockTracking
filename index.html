@@ -89,11 +89,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-slate-400 mb-1">所属一级热点 (大产业)</label>
-                        <input type="text" id="editStockLevel1" list="historyLevel1List" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="可留空">
+                        <input type="text" id="editStockLevel1" list="historyLevel1List" oninput="autoFillEditModalLevel1Analysis(this.value)" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="可留空">
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-400 mb-1">所属二级热点 (细分逻辑)</label>
-                        <input type="text" id="editStockLevel2" list="historyLevel2List" onchange="autoFillEditModalByLevel2(this.value)" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="可留空">
+                        <input type="text" id="editStockLevel2" list="historyLevel2List" oninput="autoFillEditModalByLevel2(this.value)" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-sm focus:border-emerald-500 focus:outline-none" placeholder="可留空">
                     </div>
                 </div>
                 <div>
@@ -411,7 +411,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-1">一级热点</label>
-                            <input type="text" id="formLevel1" list="historyLevel1List" oninput="updateLevel2FormDatalist()" placeholder="如: 半导体" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                            <input type="text" id="formLevel1" list="historyLevel1List" oninput="updateLevel2FormDatalist(); autoFillLevel1Analysis(this.value)" placeholder="如: 半导体" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-1">二级热点</label>
@@ -695,6 +695,17 @@
             return cache;
         }
 
+        // --- UI Interactions Added Here ---
+        function openAddStockModal() {
+            switchTab('editor');
+            resetForm();
+            showToast("💡 已为您跳转至录入界面，请在此处新增热点及标的", "success");
+            const formEl = $id('recordForm');
+            if (formEl) {
+                formEl.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
         async function startBulkDiagnosticsDB(silent = false) {
             const candidates = scanDatabaseCandidates(); if (candidates.length === 0) return;
             if (!silent) showToast("🚀 启动内存级并发更新全量库...", "success");
@@ -952,8 +963,12 @@
         function synchronizeDatabase(ur) { const tl2=(ur.level2||"未分类热点").trim().toLowerCase(), tl1=ur.level1?ur.level1.trim():"", tl1a=ur.level1Analysis?ur.level1Analysis.trim():"", tha=ur.hotspotAnalysis?ur.hotspotAnalysis.trim():""; let sy=0; stockData.forEach(r=>{if((r.level2||"未分类热点").trim().toLowerCase()===tl2){if(r.level1!==tl1||r.level1Analysis!==tl1a||r.hotspotAnalysis!==tha){r.level1=tl1;r.level1Analysis=tl1a;r.hotspotAnalysis=tha;sy++;}}}); return sy; }
         function buildHistoryDatalists() { const s1=new Set(), s2=new Set(), sl=new Set(); stockData.forEach(i=>{if(i.level1)s1.add(i.level1);if(i.level2)s2.add(i.level2);if(i.leaders)i.leaders.forEach(l=>{if(l.name)sl.add(l.name);});}); const dl1=$id('historyLevel1List'); if(dl1){dl1.innerHTML=""; s1.forEach(v=>dl1.appendChild(new Option(v)));} const dl2=$id('historyLevel2List'); if(dl2){dl2.innerHTML=""; s2.forEach(v=>dl2.appendChild(new Option(v)));} const dll=$id('historyLeaderNameList'); if(dll){dll.innerHTML=""; sl.forEach(v=>dll.appendChild(new Option(v)));} updateLevel2FormDatalist(); }
         function updateLevel2FormDatalist() { const v=$id('formLevel1')?$id('formLevel1').value.trim().toLowerCase():"", dl=$id('historyLevel2List'); if(!dl)return; dl.innerHTML=""; const s=new Set(); stockData.forEach(i=>{if(!v||(i.level1&&i.level1.toLowerCase()===v))if(i.level2)s.add(i.level2);}); s.forEach(x=>dl.appendChild(new Option(x))); }
-        function autoFillEditModalByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('editStockLevel1').value=mr.level1||""; $id('editStockLevel1Analysis').value=mr.level1Analysis||""; $id('editStockHotspotAnalysis').value=mr.hotspotAnalysis||""; showToast(`已带入【${v}】`); setTimeout(()=>{autoResize($id('editStockLevel1Analysis')); autoResize($id('editStockHotspotAnalysis'));}, 0);} }
-        function autoFillHotspotByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('formLevel1').value=mr.level1||""; $id('formLevel1Analysis').value=mr.level1Analysis||""; $id('formHotspotAnalysis').value=mr.hotspotAnalysis||""; updateLevel2FormDatalist(); setTimeout(()=>{autoResize($id('formLevel1Analysis')); autoResize($id('formHotspotAnalysis'));}, 0);} }
+        
+        function autoFillLevel1Analysis(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level1&&i.level1.toLowerCase()===v.toLowerCase()&&i.level1Analysis); if(mr){$id('formLevel1Analysis').value=mr.level1Analysis; setTimeout(()=>autoResize($id('formLevel1Analysis')), 0);} }
+        function autoFillEditModalLevel1Analysis(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level1&&i.level1.toLowerCase()===v.toLowerCase()&&i.level1Analysis); if(mr){$id('editStockLevel1Analysis').value=mr.level1Analysis; setTimeout(()=>autoResize($id('editStockLevel1Analysis')), 0);} }
+        
+        function autoFillEditModalByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2&&i.level2.toLowerCase()===v.toLowerCase()); if(mr){if(!$id('editStockLevel1').value){$id('editStockLevel1').value=mr.level1||""; $id('editStockLevel1Analysis').value=mr.level1Analysis||"";} $id('editStockHotspotAnalysis').value=mr.hotspotAnalysis||""; showToast(`已带入【${v}】相关逻辑`); setTimeout(()=>{autoResize($id('editStockLevel1Analysis')); autoResize($id('editStockHotspotAnalysis'));}, 0);} }
+        function autoFillHotspotByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2&&i.level2.toLowerCase()===v.toLowerCase()); if(mr){if(!$id('formLevel1').value){$id('formLevel1').value=mr.level1||""; $id('formLevel1Analysis').value=mr.level1Analysis||"";} $id('formHotspotAnalysis').value=mr.hotspotAnalysis||""; updateLevel2FormDatalist(); setTimeout(()=>{autoResize($id('formLevel1Analysis')); autoResize($id('formHotspotAnalysis'));}, 0);} }
         function autoFillLeaderByCode(r,v) { v=v.trim(); if(v.length<6)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.code.trim()===v);if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-name-input').value=ml.name; const ta = row.querySelector('.leader-analysis-input'); ta.value=ml.analysis; autoResize(ta);}} }
         function autoFillLeaderRow(r,v) { v=v.trim(); if(!v)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.name.toLowerCase()===v.toLowerCase());if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-code-input').value=ml.code; const ta = row.querySelector('.leader-analysis-input'); ta.value=ml.analysis; autoResize(ta);}} }
 
@@ -1211,20 +1226,50 @@
     function renderHistoryTable() {
         const b=$id('historyTableBody'); if(!b)return; b.innerHTML="";
         if(stockData.length===0){ b.innerHTML=`<tr><td colspan="6" class="py-8 text-center text-slate-500 text-sm">暂无数据，请录入。</td></tr>`; return; }
-        stockData.forEach((r)=>{
+        
+        let renderData = stockData.map(r => ({ ...r, _rs_date: 1, _rs_level1: 1 }));
+        let startIdxDate = 0, startIdxL1 = 0;
+        
+        for (let i = 1; i < renderData.length; i++) {
+            if (renderData[i].date === renderData[startIdxDate].date) {
+                renderData[startIdxDate]._rs_date++;
+                renderData[i]._rs_date = 0;
+            } else {
+                startIdxDate = i;
+                renderData[startIdxDate]._rs_date = 1;
+            }
+            
+            if (renderData[i].date === renderData[startIdxL1].date && renderData[i].level1 === renderData[startIdxL1].level1 && renderData[i].level1) {
+                renderData[startIdxL1]._rs_level1++;
+                renderData[i]._rs_level1 = 0;
+            } else {
+                startIdxL1 = i;
+                renderData[startIdxL1]._rs_level1 = 1;
+            }
+        }
+
+        renderData.forEach((r)=>{
             let ib=r.intensity==="超强"?"bg-red-500/20 text-red-400 border border-red-500/30":(r.intensity==="强"?"bg-orange-500/20 text-orange-400 border border-orange-500/30":"bg-yellow-500/20 text-yellow-400 border border-yellow-500/30");
             const tr=document.createElement('tr'); tr.className="border-b border-slate-800 hover:bg-slate-800/40 text-xs";
             
-            tr.innerHTML=`
-                <td class="py-3 px-4 font-mono text-center">${r.date}</td>
-                <td class="py-3 px-4">${r.level1||'--'}</td>
-                <td class="py-3 px-4 font-bold text-emerald-400 cursor-pointer hover:underline hover:text-emerald-300 transition-colors" title="点击跳转所有个股并过滤该板块" onclick="jumpToDatabaseAndFilterByLevel2('${r.level2}')">${r.level2}</td>
-                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded ${ib}">${r.intensity}</span></td>
-                <td class="py-3 px-4 font-mono font-bold text-emerald-500">${r.leaders?.length||0}</td>
-                <td class="py-3 px-4 text-right">
+            let html = "";
+            if (r._rs_date > 0) {
+                html += `<td rowspan="${r._rs_date}" class="py-3 px-4 font-mono text-center align-middle ${r._rs_date>1?'border-r border-slate-700/50 bg-[#1e293b]/20':''}">${r.date}</td>`;
+            }
+            if (r._rs_level1 > 0) {
+                html += `<td rowspan="${r._rs_level1}" class="py-3 px-4 align-middle ${r._rs_level1>1?'border-r border-slate-700/50 bg-[#1e293b]/40':''}">${r.level1||'--'}</td>`;
+            }
+            
+            html += `
+                <td class="py-3 px-4 font-bold text-emerald-400 cursor-pointer hover:underline hover:text-emerald-300 transition-colors align-middle" title="点击跳转所有个股并过滤该板块" onclick="jumpToDatabaseAndFilterByLevel2('${r.level2}')">${r.level2}</td>
+                <td class="py-3 px-4 align-middle"><span class="px-2 py-0.5 rounded ${ib}">${r.intensity}</span></td>
+                <td class="py-3 px-4 font-mono font-bold text-emerald-500 align-middle">${r.leaders?.length||0}</td>
+                <td class="py-3 px-4 text-right align-middle">
                     <button onclick="editRecord('${r.date}', '${r.level2}')" class="text-blue-400 hover:text-blue-300 underline font-medium mr-3">编辑</button>
                     <button onclick="deleteRecord('${r.date}', '${r.level2}')" class="text-red-400 hover:text-red-300 underline font-medium">删除</button>
                 </td>`;
+            
+            tr.innerHTML = html;
             b.appendChild(tr);
         });
     }
