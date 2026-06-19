@@ -297,15 +297,15 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-800 text-xs text-slate-400 bg-[#0f172a]/80 select-none whitespace-nowrap">
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('date', 'dragon')">题材源头/日期 <span id="dg-sort-icon-date">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('intensity', 'dragon')">题材强度 <span id="dg-sort-icon-intensity">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'dragon')">标的信息 <span id="dg-sort-icon-name">↕</span></span></th>
-                                <th class="py-3.5 px-3 min-w-[200px] text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'dragon')">个股逻辑 <span id="dg-sort-icon-analysis">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('limitUpCount10', 'dragon')">前10日涨停 <span id="dg-sort-icon-limitUpCount10">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'dragon')">现价 <span id="dg-sort-icon-currentPrice">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'dragon')">5日近况涨幅 <span id="dg-sort-icon-fiveDayChangePercent">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'dragon')">1月高位回撤 <span id="dg-sort-icon-pullback">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('signal', 'dragon')">诊断信号 <span id="dg-sort-icon-signal">↕</span></span></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('date', 'dragon')">题材源头/日期 <span id="dg-sort-icon-date">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'date', 'dragon')">▼</span></div><div id="inline-filter-dragon-date" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('intensity', 'dragon')">题材强度 <span id="dg-sort-icon-intensity">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'intensity', 'dragon')">▼</span></div><div id="inline-filter-dragon-intensity" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'dragon')">标的信息 <span id="dg-sort-icon-name">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'name', 'dragon')">▼</span></div><div id="inline-filter-dragon-name" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 min-w-[200px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'dragon')">个股逻辑 <span id="dg-sort-icon-analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'analysis', 'dragon')">▼</span></div><div id="inline-filter-dragon-analysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('limitUpCount10', 'dragon')">前10日涨停 <span id="dg-sort-icon-limitUpCount10">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'limitUpCount10', 'dragon')">▼</span></div><div id="inline-filter-dragon-limitUpCount10" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'dragon')">现价 <span id="dg-sort-icon-currentPrice">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'currentPrice', 'dragon')">▼</span></div><div id="inline-filter-dragon-currentPrice" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'dragon')">5日近况涨幅 <span id="dg-sort-icon-fiveDayChangePercent">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'fiveDayChangePercent', 'dragon')">▼</span></div><div id="inline-filter-dragon-fiveDayChangePercent" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'dragon')">1月高位回撤 <span id="dg-sort-icon-pullback">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'pullback', 'dragon')">▼</span></div><div id="inline-filter-dragon-pullback" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3.5 px-3 relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('signal', 'dragon')">诊断信号 <span id="dg-sort-icon-signal">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'signal', 'dragon')">▼</span></div><div id="inline-filter-dragon-signal" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
                                 <th class="py-3.5 px-3 text-center">操作</th>
                             </tr>
                         </thead>
@@ -1025,18 +1025,56 @@
             case 'level1': return c.level1||"--"; case 'level1Analysis': return c.level1Analysis||"--"; case 'level2': return c.level2; case 'hotspotAnalysis': return c.hotspotAnalysis||"--"; case 'name': return c.name; case 'date': return m==='dragon'?c.level2:c.date; case 'intensity': return c.intensity; case 'analysis': return c.analysis||"--"; case 'limitUpCount10': return ca&&ca.timestamp>0?(ca.limitUpCount10||0)+"次":"待诊断"; case 'currentPrice': return ca&&ca.timestamp>0&&typeof ca.currentPrice==='number'&&!isNaN(ca.currentPrice)?ca.currentPrice.toFixed(2)+"元":"待诊断"; case 'fiveDayChangePercent': return ca&&ca.timestamp>0&&typeof ca.fiveDayChangePercent==='number'&&!isNaN(ca.fiveDayChangePercent)?ca.fiveDayChangePercent.toFixed(2)+"%":"待诊断"; case 'pullback': if(ca&&ca.timestamp>0&&typeof ca.currentPrice==='number'&&!isNaN(ca.currentPrice)&&typeof ca.oneMonthHigh==='number'&&ca.oneMonthHigh>0)return (((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100).toFixed(1)+"%"; return "待诊断"; case 'signal': if(ca&&ca.timestamp>0&&typeof ca.currentPrice==='number'&&!isNaN(ca.currentPrice)&&typeof ca.oneMonthHigh==='number'&&ca.oneMonthHigh>0)return getDragonSignal((((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100),ca.isDoji,ca.isNearMA20,ca.macdDiv).label; return "待诊断"; default: return "";
         }
     }
+    
     document.addEventListener('click', (e)=>{if(activeInlineFilterId){const m=$id(activeInlineFilterId), it=e.target.hasAttribute('onclick')&&e.target.getAttribute('onclick').includes('toggleInlineFilter'); if(m&&!m.contains(e.target)&&!it){m.classList.add('hidden'); activeInlineFilterId=null;}}});
+    
     function toggleInlineFilter(e, f, m) {
         e.stopPropagation(); const mid=`inline-filter-${m}-${f}`, menu=$id(mid);
         if(activeInlineFilterId===mid){menu.classList.add('hidden'); activeInlineFilterId=null; return;}
         if(activeInlineFilterId){const am=$id(activeInlineFilterId); if(am)am.classList.add('hidden');}
-        currentFilterField=f; currentFilterMode=m; const c=m==='dragon'?scanDragonCandidates():scanDatabaseCandidates(), u=new Set(); c.forEach(x=>u.add(getRowDisplayValue(x,f,m)));
-        const sv=Array.from(u).sort((a,b)=>{const nA=parseFloat(a),nB=parseFloat(b); if(!isNaN(nA)&&!isNaN(nB))return nA-nB; return String(a).localeCompare(String(b),'zh');});
+        currentFilterField=f; currentFilterMode=m; 
+        
+        let sv = [];
+        if (f === 'fiveDayChangePercent' || f === 'pullback') {
+            // 根据数据动态计算区间
+            const c = m === 'dragon' ? scanDragonCandidates() : scanDatabaseCandidates();
+            let vals = []; let hasInvalid = false;
+            c.forEach(x => {
+                const ca = stockPriceCache[x.code]; let val = null;
+                if (ca && ca.timestamp > 0) {
+                    if (f === 'fiveDayChangePercent' && typeof ca.fiveDayChangePercent === 'number') val = ca.fiveDayChangePercent;
+                    if (f === 'pullback' && typeof ca.currentPrice === 'number' && ca.oneMonthHigh) val = ((ca.currentPrice - ca.oneMonthHigh) / ca.oneMonthHigh) * 100;
+                }
+                if (val !== null && !isNaN(val)) vals.push(val); else hasInvalid = true;
+            });
+            
+            if (vals.length > 0) {
+                let min = Math.min(...vals), max = Math.max(...vals), range = max - min, step = 5;
+                if (range > 100) step = 20; else if (range > 50) step = 10; else if (range > 20) step = 5; else if (range > 10) step = 2; else step = 1;
+                
+                let start = Math.floor(min / step) * step, end = Math.ceil(max / step) * step;
+                if (start === end) end += step; // 确保极值单一时有区间
+                
+                for (let i = start; i < end; i += step) {
+                    let bucketMax = i + step;
+                    // 只展示包含实际数据的动态区间
+                    if (vals.some(v => v >= i && v <= bucketMax)) {
+                        sv.push(`${i}% 到 ${bucketMax}%`);
+                    }
+                }
+            }
+            if (hasInvalid) sv.push("待诊断");
+        } else {
+            const c=m==='dragon'?scanDragonCandidates():scanDatabaseCandidates(), u=new Set(); c.forEach(x=>u.add(getRowDisplayValue(x,f,m)));
+            sv=Array.from(u).sort((a,b)=>{const nA=parseFloat(a),nB=parseFloat(b); if(!isNaN(nA)&&!isNaN(nB))return nA-nB; return String(a).localeCompare(String(b),'zh');});
+        }
+        
         let h=`<div class="flex justify-between items-center text-xs pb-2 border-b border-slate-700 select-none mb-2"><button type="button" onclick="selectAllInlineCheckboxes('${mid}',true)" class="text-emerald-400 hover:text-emerald-300 font-semibold underline">全选</button><button type="button" onclick="selectAllInlineCheckboxes('${mid}',false)" class="text-slate-400 hover:text-slate-300 font-semibold underline">清空</button></div><div class="max-h-48 overflow-y-auto no-scrollbar space-y-1">`;
         const caf=m==='dragon'?columnFilters[f]:dbFilters[f]; sv.forEach(v=>{const ic=!caf||caf.length===0||caf.includes(v); h+=`<label class="flex items-center gap-2 text-slate-300 text-xs hover:text-white cursor-pointer py-1 select-none"><input type="checkbox" value="${v}" ${ic?'checked':''} class="inline-filter-checkbox rounded bg-[#0f172a] border-slate-600 text-emerald-500 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"><span class="truncate max-w-[120px]" title="${v}">${v}</span></label>`;});
         h+=`</div><div class="flex justify-end gap-2 pt-2 mt-2 border-t border-slate-700"><button onclick="document.getElementById('${mid}').classList.add('hidden'); activeInlineFilterId=null;" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] rounded">取消</button><button onclick="submitInlineFilter('${mid}')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] rounded">确定</button></div>`;
         menu.innerHTML=h; menu.classList.remove('hidden'); activeInlineFilterId=mid;
     }
+    
     function selectAllInlineCheckboxes(id, s) { const m=$id(id); if(m)m.querySelectorAll('.inline-filter-checkbox').forEach(c=>c.checked=s); }
     function submitInlineFilter(id) { const m=$id(id); if(!m)return; const cb=m.querySelectorAll('.inline-filter-checkbox'), sv=[], av=[]; cb.forEach(c=>{av.push(c.value); if(c.checked)sv.push(c.value);}); let tf=currentFilterMode==='dragon'?columnFilters:dbFilters; if(sv.length===av.length||sv.length===0)tf[currentFilterField]=[]; else tf[currentFilterField]=sv; m.classList.add('hidden'); activeInlineFilterId=null; renderPoolTable(currentFilterMode); }
     function clearSingleFilter(f, m) { if(m==='dragon'){columnFilters[f]=[];} else {dbFilters[f]=[];} renderPoolTable(m); }
@@ -1056,7 +1094,35 @@
         const cd=isD?scanDatabaseCandidates():scanDragonCandidates(), si=$id(isD?'dbSearchInput':'dragonSearchInput'), sv=si?si.value.trim().toLowerCase():"", af=isD?dbFilters:columnFilters;
         let ft=cd.filter(c=>{
             if(sv&&!Object.values(c).some(v=>String(v).toLowerCase().includes(sv)))return false;
-            for(let f in af){if(af[f]&&af[f].length>0&&!af[f].includes(getRowDisplayValue(c,f,m)))return false;}
+            for(let f in af){
+                if(af[f]&&af[f].length>0){
+                    // --- 动态区间解析引擎 ---
+                    if(f === 'fiveDayChangePercent' || f === 'pullback') {
+                        const ca = stockPriceCache[c.code]; let val = null;
+                        if(ca && ca.timestamp>0) {
+                            if(f === 'fiveDayChangePercent' && typeof ca.fiveDayChangePercent==='number') val = ca.fiveDayChangePercent;
+                            if(f === 'pullback' && typeof ca.currentPrice==='number' && ca.oneMonthHigh) val = ((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100;
+                        }
+                        let matched = false;
+                        if (val === null || isNaN(val)) {
+                            if (af[f].includes("待诊断")) matched = true;
+                        } else {
+                            for(let r of af[f]) {
+                                if (r === "待诊断") continue;
+                                // 动态解析出最小值和最大值
+                                let parts = r.replace(/%/g, '').split(" 到 ");
+                                if (parts.length === 2) {
+                                    let minV = parseFloat(parts[0]), maxV = parseFloat(parts[1]);
+                                    if (val >= minV && val <= maxV) { matched = true; break; }
+                                }
+                            }
+                        }
+                        if(!matched) return false;
+                    } else {
+                        if(!af[f].includes(getRowDisplayValue(c,f,m))) return false;
+                    }
+                }
+            }
             if(!isD){ const sf=$id('dragonSignalFilter')?.value; if(sf){ const ca=stockPriceCache[c.code]; if(sf==="未诊断"){if(ca&&ca.timestamp>0)return false;}else{ if(!ca||ca.timestamp===0||typeof ca.currentPrice!=='number'||ca.currentPrice===null)return false; const pb=ca.oneMonthHigh?((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100:0; if(sf==="MACD底背离"){if(!ca.macdDiv||ca.macdDiv.length===0)return false;} else if(sf==="极度缩量十字星"){if(!ca.isDoji)return false;} else if(sf==="黄金买点"){if(!(pb<=-15&&pb>=-35))return false;} else if(sf==="接近20日线"){if(!ca.isNearMA20)return false;} else if(sf==="强势洗盘"){if(!(pb>-15&&pb<=-5))return false;} else if(sf==="支撑试探"){if(!(pb<-35))return false;} } } } return true;
         });
         const sf=isD?dbSortField:dragonSortField, sa=isD?dbSortAsc:dragonSortAsc;
@@ -1091,7 +1157,14 @@
                 if(typeof ca.currentPrice==='number'&&!isNaN(ca.currentPrice)){
                     const pc=ca.dailyChangePercent>=0?"text-red-500 font-bold":"text-green-500 font-bold", cs=ca.dailyChangePercent>=0?"+":""; cp=`<div class="font-bold ${pc}">${ca.currentPrice.toFixed(2)} <span class="text-[10px] font-normal">${cs}${(ca.dailyChangePercent||0).toFixed(2)}%</span></div>`;
                     if(typeof ca.fiveDayChangePercent==='number'&&!isNaN(ca.fiveDayChangePercent)){const fc=ca.fiveDayChangePercent>=0?"text-red-500 font-bold":"text-green-500 font-bold", fs=ca.fiveDayChangePercent>=0?"+":""; fd=`<span class="${fc} font-mono-custom font-bold">${fs}${ca.fiveDayChangePercent.toFixed(2)}%</span>`;}
-                    if(typeof ca.oneMonthHigh==='number'&&!isNaN(ca.oneMonthHigh)&&ca.oneMonthHigh>0){const pv=((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100, pbc=pv>=0?"text-red-500 font-bold":"text-green-500 font-bold"; pb=`<div class="font-bold ${pbc} font-mono-custom">${pv.toFixed(1)}%</div>`; const sig=getDragonSignal(pv,ca.isDoji,ca.isNearMA20,ca.macdDiv); sb=`<span class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${sig.class}">${sig.label}</span>`;}else sb=`<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">无极值数据</span>`;
+                    
+                    // --- 核心更新：追加显示近1月最高点 ---
+                    if(typeof ca.oneMonthHigh==='number'&&!isNaN(ca.oneMonthHigh)&&ca.oneMonthHigh>0){
+                        const pv=((ca.currentPrice-ca.oneMonthHigh)/ca.oneMonthHigh)*100, pbc=pv>=0?"text-red-500 font-bold":"text-green-500 font-bold"; 
+                        pb=`<div class="font-bold ${pbc} font-mono-custom">${pv.toFixed(1)}%</div><div class="text-[9px] text-slate-500 mt-0.5">高点:${ca.oneMonthHigh.toFixed(2)}</div>`; 
+                        const sig=getDragonSignal(pv,ca.isDoji,ca.isNearMA20,ca.macdDiv); sb=`<span class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all ${sig.class}">${sig.label}</span>`;
+                    } else sb=`<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">无极值数据</span>`;
+                    
                     const c10=ca.limitUpCount10||0; if(c10>0)lu=`<span class="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20 font-bold font-mono">${c10}次</span>`;else lu=`<span class="text-slate-500 font-mono">0次</span>`;
                 }else{cp=`<span class="text-slate-500 text-[10px]">停牌/无效</span>`; sb=`<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">状态异常</span>`;}
             }
@@ -1135,7 +1208,6 @@
         resetForm(); renderHistoryTable(); buildHistoryDatalists(); renderAll();
     }
     
-    // (修复2) 在操作栏中增加了“编辑”按钮
     function renderHistoryTable() {
         const b=$id('historyTableBody'); if(!b)return; b.innerHTML="";
         if(stockData.length===0){ b.innerHTML=`<tr><td colspan="6" class="py-8 text-center text-slate-500 text-sm">暂无数据，请录入。</td></tr>`; return; }
@@ -1143,7 +1215,6 @@
             let ib=r.intensity==="超强"?"bg-red-500/20 text-red-400 border border-red-500/30":(r.intensity==="强"?"bg-orange-500/20 text-orange-400 border border-orange-500/30":"bg-yellow-500/20 text-yellow-400 border border-yellow-500/30");
             const tr=document.createElement('tr'); tr.className="border-b border-slate-800 hover:bg-slate-800/40 text-xs";
             
-            // (修复3) 二级热点字段点击后可以自动跳转到“所有个股”数据库进行过滤查看
             tr.innerHTML=`
                 <td class="py-3 px-4 font-mono text-center">${r.date}</td>
                 <td class="py-3 px-4">${r.level1||'--'}</td>
@@ -1158,7 +1229,6 @@
         });
     }
 
-    // 将已有归档提取至上方表单供用户二次修改
     function editRecord(dt, l2) {
         const rec = stockData.find(r => r.date === dt && r.level2 === l2);
         if (!rec) return showToast("未找到对应的归档记录", "error");
@@ -1182,8 +1252,8 @@
             addLeaderField();
         }
 
-        switchTab('editor'); // 确保我们在编辑tab下
-        $id('recordForm').scrollIntoView({ behavior: 'smooth' }); // 滚动到上方表单
+        switchTab('editor');
+        $id('recordForm').scrollIntoView({ behavior: 'smooth' });
         showToast(`✅ 已将【${l2}】加载到表单，可直接修改并保存覆盖。`, "success");
     }
 
