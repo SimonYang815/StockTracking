@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>至尊版·股票热点双级看板与龙回头量化系统</title>
+    <title>Simon's Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS Excel -->
@@ -36,7 +36,7 @@
         .rich-editor-content pre { background-color: #0f172a; padding: 1rem; border-radius: 0.5rem; border: 1px solid #334155; overflow-x: auto; font-family: 'JetBrains Mono', monospace; color: #38bdf8; margin-bottom: 1em; }
         .rich-editor-content a { color: #38bdf8; text-decoration: underline; }
         .rich-editor-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-        .rich-editor-content th, .rich-editor-content td { border: 1px solid #475569; padding: 8px; text-align: left; }
+        .rich-editor-content th, .rich-editor-content td { border: 1px solid #475569; padding: 8px; text-align: center; } /* 默认表格内容居中 */
         .rich-editor-content th { background-color: #1e293b; font-weight: 600; }
     </style>
 </head>
@@ -96,15 +96,15 @@
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-1">一级热点产业大逻辑 (全局同步)</label>
-                    <textarea id="editStockLevel1Analysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                    <textarea id="editStockLevel1Analysis" oninput="autoResize(this)" style="overflow:hidden;" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-1">二级热点爆发逻辑 (全局同步)</label>
-                    <textarea id="editStockHotspotAnalysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                    <textarea id="editStockHotspotAnalysis" oninput="autoResize(this)" style="overflow:hidden;" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-400 mb-1">个股自身驱动逻辑与特色</label>
-                    <textarea id="editStockAnalysis" rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                    <textarea id="editStockAnalysis" oninput="autoResize(this)" style="overflow:hidden;" rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-lg p-2.5 text-xs focus:border-emerald-500 focus:outline-none leading-relaxed"></textarea>
                 </div>
             </div>
             <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center">
@@ -118,21 +118,19 @@
     </div>
 
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 space-y-6">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#1e293b]/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-xl">
+        <header class="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#1e293b]/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-xl">
             <div>
                 <div class="flex items-center gap-3">
                     <span class="text-3xl">🐉</span>
-                    <h1 class="text-2xl font-extrabold bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">股票热点与龙回头量化系统</h1>
-                    <span class="ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 高清全量修复版 4.0</span>
+                    <h1 class="text-2xl font-extrabold bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">Simon's Dashboard</h1>
                 </div>
-                <p class="text-xs text-slate-400 mt-1 font-medium font-mono-custom">防崩溃全包导入 / K线数据并发碰撞修复 / 全系统备份</p>
             </div>
             <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white shadow-lg transition-all">📊 看板大厅</button>
-                <button onclick="switchTab('dragon')" id="btn-tab-dragon" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🐉 龙回头策略池</button>
-                <button onclick="switchTab('database')" id="btn-tab-database" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🗄️ 全量个股库</button>
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white shadow-lg transition-all">📊 看板</button>
+                <button onclick="switchTab('dragon')" id="btn-tab-dragon" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🐉 龙回头</button>
+                <button onclick="switchTab('database')" id="btn-tab-database" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">🗄️ 所有个股</button>
                 <button onclick="switchTab('industry')" id="btn-tab-industry" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">⛓️ 产业链研究</button>
-                <button onclick="switchTab('editor')" id="btn-tab-editor" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">✍️ 录入与全量备份</button>
+                <button onclick="switchTab('editor')" id="btn-tab-editor" class="px-4 py-2 text-sm font-semibold rounded-xl bg-[#334155] text-slate-300 hover:bg-[#475569] transition-all">✍️ 录入与备份</button>
             </div>
         </header>
 
@@ -225,7 +223,7 @@
             <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div>
-                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>🗄️</span> 核心全量个股数据库 (平铺总览)</h2>
+                        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>🗄️</span> 所有个股数据库 (平铺总览)</h2>
                         <p class="text-xs text-slate-400 mt-1">💡 操作秘籍：支持多条件复合筛选；新增支持单行编辑穿透更新。</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
@@ -233,7 +231,7 @@
                         <input type="file" id="dbExcelFile" class="hidden" accept=".xlsx, .xls" onchange="importDatabaseExcel(event)">
                         <button onclick="document.getElementById('dbExcelFile').click()" class="px-4 py-2.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs font-bold rounded-xl border border-blue-500/30 transition-all flex items-center gap-1.5">📥 智能导入</button>
                         <button onclick="exportDatabaseExcel()" class="px-4 py-2.5 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 text-xs font-bold rounded-xl border border-amber-500/30 transition-all flex items-center gap-1.5">💾 导出全量库</button>
-                        <button onclick="startBulkDiagnosticsDB()" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg transition-all"><span>⚡</span> 多线程极速扫描全库</button>
+                        <button onclick="startBulkDiagnosticsDB()" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg transition-all"><span>⚡</span> 联网更新</button>
                     </div>
                 </div>
 
@@ -249,19 +247,19 @@
                 <div id="dbActiveFiltersBreadcrumbs" class="flex flex-wrap gap-2 text-xs hidden"></div>
 
                 <div class="overflow-x-auto rounded-xl border border-slate-800 bg-[#0f172a]/40 pb-20"> 
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-center border-collapse">
                         <thead>
                             <tr class="border-b border-slate-800 text-xs text-slate-400 font-semibold bg-[#0f172a]/80 select-none whitespace-nowrap">
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level1', 'database')">一级热点 <span id="db-sort-icon-level1">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level1', 'database')">▼</span></div><div id="inline-filter-database-level1" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 min-w-[180px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level1Analysis', 'database')">一级逻辑 <span id="db-sort-icon-level1Analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level1Analysis', 'database')">▼</span></div><div id="inline-filter-database-level1Analysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level2', 'database')">二级热点 <span id="db-sort-icon-level2">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'level2', 'database')">▼</span></div><div id="inline-filter-database-level2" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 min-w-[200px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('hotspotAnalysis', 'database')">二级逻辑 <span id="db-sort-icon-hotspotAnalysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'hotspotAnalysis', 'database')">▼</span></div><div id="inline-filter-database-hotspotAnalysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2"></div></th>
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'database')">名称/代码 <span id="db-sort-icon-name">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'name', 'database')">▼</span></div><div id="inline-filter-database-name" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 min-w-[180px] relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'database')">个股逻辑 <span id="db-sort-icon-analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'analysis', 'database')">▼</span></div><div id="inline-filter-database-analysis" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2"></div></th>
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'database')">现价 <span id="db-sort-icon-currentPrice">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'currentPrice', 'database')">▼</span></div><div id="inline-filter-database-currentPrice" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'database')">5日涨幅 <span id="db-sort-icon-fiveDayChangePercent">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'fiveDayChangePercent', 'database')">▼</span></div><div id="inline-filter-database-fiveDayChangePercent" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 relative"><div class="flex justify-between"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'database')">1月高位回撤 <span id="db-sort-icon-pullback">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 ml-auto text-[10px]" onclick="toggleInlineFilter(event, 'pullback', 'database')">▼</span></div><div id="inline-filter-database-pullback" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2"></div></th>
-                                <th class="py-3 px-3 text-right">操作</th>
+                                <th class="py-3 px-3 w-[8%] min-w-[90px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level1', 'database')">一级热点 <span id="db-sort-icon-level1">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'level1', 'database')">▼</span></div><div id="inline-filter-database-level1" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[15%] min-w-[150px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level1Analysis', 'database')">一级逻辑 <span id="db-sort-icon-level1Analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'level1Analysis', 'database')">▼</span></div><div id="inline-filter-database-level1Analysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[10%] min-w-[90px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('level2', 'database')">二级热点 <span id="db-sort-icon-level2">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'level2', 'database')">▼</span></div><div id="inline-filter-database-level2" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[18%] min-w-[180px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('hotspotAnalysis', 'database')">二级逻辑 <span id="db-sort-icon-hotspotAnalysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'hotspotAnalysis', 'database')">▼</span></div><div id="inline-filter-database-hotspotAnalysis" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[8%] min-w-[90px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'database')">名称/代码 <span id="db-sort-icon-name">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'name', 'database')">▼</span></div><div id="inline-filter-database-name" class="absolute top-full left-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[18%] min-w-[180px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'database')">个股逻辑 <span id="db-sort-icon-analysis">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'analysis', 'database')">▼</span></div><div id="inline-filter-database-analysis" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[200px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[6%] min-w-[70px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'database')">现价 <span id="db-sort-icon-currentPrice">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'currentPrice', 'database')">▼</span></div><div id="inline-filter-database-currentPrice" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[6%] min-w-[70px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'database')">5日涨幅 <span id="db-sort-icon-fiveDayChangePercent">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'fiveDayChangePercent', 'database')">▼</span></div><div id="inline-filter-database-fiveDayChangePercent" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[7%] min-w-[80px] relative text-center"><div class="flex justify-center items-center gap-1"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'database')">1月高位回撤 <span id="db-sort-icon-pullback">↕</span></span><span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, 'pullback', 'database')">▼</span></div><div id="inline-filter-database-pullback" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left"></div></th>
+                                <th class="py-3 px-3 w-[4%] text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody id="databasePoolTableBody" class="text-sm text-slate-300 border-b border-slate-800/60 max-h-[600px] overflow-y-auto"></tbody>
@@ -275,7 +273,7 @@
             <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>🐉</span> 龙回头量化筛选池</h2>
-                    <button onclick="startBulkDiagnostics()" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl text-xs font-bold">⚡ 一键极速并发扫描</button>
+                    <button onclick="startBulkDiagnostics()" class="px-4 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl text-xs font-bold">⚡ 联网更新</button>
                 </div>
                 <div id="diagnosticProgressContainer" class="p-4 bg-[#0f172a] rounded-xl border border-slate-800/80 hidden">
                     <div class="flex justify-between items-center mb-1.5 text-xs text-slate-300"><span id="diagnosticStatusText" class="font-semibold text-emerald-400 animate-pulse">🔄 现价秒出，正在回溯历史包...</span><span id="diagnosticPercentText" class="font-mono">0%</span></div>
@@ -297,16 +295,16 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-800 text-xs text-slate-400 bg-[#0f172a]/80 select-none whitespace-nowrap">
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('date', 'dragon')">题材源头/日期 <span id="dg-sort-icon-date">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('intensity', 'dragon')">题材强度 <span id="dg-sort-icon-intensity">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'dragon')">标的信息 <span id="dg-sort-icon-name">↕</span></span></th>
-                                <th class="py-3.5 px-3 min-w-[200px]"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'dragon')">个股逻辑 <span id="dg-sort-icon-analysis">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('limitUpCount10', 'dragon')">前10日涨停 <span id="dg-sort-icon-limitUpCount10">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'dragon')">现价 <span id="dg-sort-icon-currentPrice">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'dragon')">5日近况涨幅 <span id="dg-sort-icon-fiveDayChangePercent">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'dragon')">1月高位回撤 <span id="dg-sort-icon-pullback">↕</span></span></th>
-                                <th class="py-3.5 px-3"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('signal', 'dragon')">诊断信号 <span id="dg-sort-icon-signal">↕</span></span></th>
-                                <th class="py-3.5 px-3 text-right">操作</th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('date', 'dragon')">题材源头/日期 <span id="dg-sort-icon-date">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('intensity', 'dragon')">题材强度 <span id="dg-sort-icon-intensity">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('name', 'dragon')">标的信息 <span id="dg-sort-icon-name">↕</span></span></th>
+                                <th class="py-3.5 px-3 min-w-[200px] text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('analysis', 'dragon')">个股逻辑 <span id="dg-sort-icon-analysis">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('limitUpCount10', 'dragon')">前10日涨停 <span id="dg-sort-icon-limitUpCount10">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('currentPrice', 'dragon')">现价 <span id="dg-sort-icon-currentPrice">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('fiveDayChangePercent', 'dragon')">5日近况涨幅 <span id="dg-sort-icon-fiveDayChangePercent">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('pullback', 'dragon')">1月高位回撤 <span id="dg-sort-icon-pullback">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center"><span class="cursor-pointer hover:text-emerald-400" onclick="sortPoolData('signal', 'dragon')">诊断信号 <span id="dg-sort-icon-signal">↕</span></span></th>
+                                <th class="py-3.5 px-3 text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody id="dragonPoolTableBody" class="text-sm text-slate-300 border-b border-slate-800/60"></tbody>
@@ -397,52 +395,62 @@
         </main>
 
         <!-- Tab 5: 数据录入/历史/备份 -->
-        <main id="tab-editor" class="hidden">
-            <div class="grid lg:grid-cols-12 gap-6">
-                <section class="lg:col-span-5 bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
-                    <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>📝</span> 热点研报录入中心</h2>
-                    <form id="recordForm" onsubmit="saveRecord(event)" class="space-y-4">
+        <main id="tab-editor" class="hidden space-y-6">
+            <!-- 上下宽屏表单结构 -->
+            <form id="recordForm" onsubmit="saveRecord(event)" class="space-y-6">
+                <!-- 基础信息与热点研报 -->
+                <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg space-y-4">
+                    <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2"><span>📝</span> 基础热点与产业逻辑录入</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-1">交易日期 <span class="text-red-500">*</span></label>
-                            <input type="date" id="formDate" required class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none">
+                            <input type="date" id="formDate" required class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-1">一级热点</label>
-                                <input type="text" id="formLevel1" list="historyLevel1List" oninput="updateLevel2FormDatalist()" placeholder="如: 半导体" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 mb-1">二级热点</label>
-                                <input type="text" id="formLevel2" list="historyLevel2List" oninput="autoFillHotspotByLevel2(this.value)" placeholder="如: eVTOL" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">一级热点</label>
+                            <input type="text" id="formLevel1" list="historyLevel1List" oninput="updateLevel2FormDatalist()" placeholder="如: 半导体" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">二级热点</label>
+                            <input type="text" id="formLevel2" list="historyLevel2List" oninput="autoFillHotspotByLevel2(this.value)" placeholder="如: eVTOL" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 mb-1">大涨强度</label>
-                            <select id="formIntensity" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm">
+                            <select id="formIntensity" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors">
                                 <option value="一般">一般</option>
                                 <option value="强">强</option>
                                 <option value="超强" selected>超强</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">一级逻辑</label>
-                            <textarea id="formLevel1Analysis" rows="2" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">二级核心解析</label>
-                            <textarea id="formHotspotAnalysis" rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-2.5 text-sm"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all">💾 保存本条板块研报</button>
-                    </form>
-                </section>
-                <section class="lg:col-span-7 bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-bold text-slate-100">🏆 核心标列配置</h2>
-                        <button type="button" onclick="addLeaderField()" class="px-3 py-1.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all">➕ 增加龙头标的</button>
                     </div>
-                    <div id="leadersInputContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-2 no-scrollbar"></div>
+
+                    <div class="space-y-4 mt-2 border-t border-slate-700/50 pt-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">一级大产业逻辑溯源</label>
+                            <textarea id="formLevel1Analysis" rows="3" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="填写整个大板块背后的宏观及长线逻辑..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">二级细分核心爆发解析</label>
+                            <textarea id="formHotspotAnalysis" rows="4" class="w-full bg-[#0f172a] text-slate-100 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors" placeholder="填写该细分概念当日爆发的具体催化、资金喜好及题材高度预期..."></textarea>
+                        </div>
+                    </div>
                 </section>
-            </div>
+
+                <!-- 核心标列配置 -->
+                <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg flex flex-col">
+                    <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-700">
+                        <h2 class="text-lg font-bold text-slate-100">🏆 核心标列 (个股) 配置</h2>
+                        <button type="button" onclick="addLeaderField()" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-semibold hover:bg-emerald-600/30 transition-all shadow-md">➕ 增加龙头标的</button>
+                    </div>
+                    
+                    <div id="leadersInputContainer" class="space-y-4 pr-2"></div>
+                    
+                    <div class="mt-6 pt-4">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg transition-all text-lg tracking-wider">💾 保存整套研报与所有核心标的</button>
+                    </div>
+                </section>
+            </form>
             
             <section class="bg-[#1e293b] p-6 rounded-2xl border border-slate-700/40 shadow-lg mt-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-slate-700 pb-4 gap-4">
@@ -491,6 +499,11 @@
         if (localStorage.getItem('stockWatchlist')) watchlistData = JSON.parse(localStorage.getItem('stockWatchlist')) || [];
         
         let currentLeadersCount = 0, confirmActionCallback = null;
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight) + 'px';
+        }
 
         // --- Utils & UI ---
         function showToast(message, type = 'success') {
@@ -582,7 +595,6 @@
                 let c = String(code).trim(); while (c.length < 6) c = '0' + c; let symbol = "";
                 if (/^(60|68|90|73|51)/.test(c)) symbol = `sh${c}`; else if (/^(00|30|39|15|18|08)/.test(c)) symbol = `sz${c}`; else if (/^(43|83|87|88|92)/.test(c)) symbol = `bj${c}`; else symbol = `sz${c}`;
                 
-                // 【核心修复】：解决并发碰撞污染回调
                 const varName = `kline_${c}_${Date.now()}_${Math.floor(Math.random() * 100000)}`; 
                 window[varName] = function(data) { window[varName + '_data'] = data; };
                 
@@ -774,12 +786,31 @@
             } catch(e) { console.warn("Diagnostic failed", e); } finally { if (spin) spin.classList.add('hidden'); if (btn) btn.classList.remove('hidden'); }
         }
 
-        // --- Data Entry UI ---
+        // --- Data Entry UI (上下布局全宽改造) ---
         function addLeaderField(name = "", code = "", analysis = "") {
-            currentLeadersCount++; const ct = $id('leadersInputContainer'); if (!ct) return;
-            const div = document.createElement('div'); const rowIdx = currentLeadersCount; div.id = `leader-row-${rowIdx}`; div.className = "p-4 bg-[#0f172a] rounded-xl border border-slate-700/60 grid grid-cols-12 gap-3 items-center relative";
-            div.innerHTML = `<div class="col-span-1 text-center font-bold text-slate-500 self-center">#${rowIdx}</div><div class="col-span-11 sm:col-span-3"><label class="block text-[10px] text-slate-400 mb-0.5">企业名称 <span class="text-red-500">*</span></label><input type="text" value="${name}" list="historyLeaderNameList" oninput="autoFillLeaderRow(${rowIdx}, this.value)" required class="leader-name-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none" placeholder="万丰奥威"></div><div class="col-span-6 sm:col-span-2"><label class="block text-[10px] text-slate-400 mb-0.5">证券代码 <span class="text-red-500">*</span></label><input type="text" value="${code}" oninput="autoFillLeaderByCode(${rowIdx}, this.value)" required class="leader-code-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none" placeholder="002085"></div><div class="col-span-12 sm:col-span-6"><label class="block text-[10px] text-slate-400 mb-0.5">个股逻辑</label><textarea class="leader-analysis-input w-full bg-[#1e293b] text-xs sm:text-sm border border-slate-700 rounded-lg p-2 focus:outline-none resize-y" rows="2">${analysis}</textarea></div><button type="button" onclick="removeLeaderField(${rowIdx})" class="absolute top-2 right-2 text-slate-500 hover:text-red-400 text-xs">✕</button>`;
+            currentLeadersCount++; 
+            const ct = $id('leadersInputContainer'); if (!ct) return;
+            const div = document.createElement('div'); const rowIdx = currentLeadersCount; div.id = `leader-row-${rowIdx}`; 
+            div.className = "p-5 bg-[#0f172a] rounded-xl border border-slate-700/60 relative group transition-all hover:border-slate-500/60";
+            div.innerHTML = `
+                <button type="button" onclick="removeLeaderField(${rowIdx})" class="absolute top-4 right-4 text-slate-500 hover:text-red-400 text-lg transition-colors" title="移除该标的">✕</button>
+                <div class="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4 pr-10">
+                    <div class="font-bold text-slate-600 text-xl w-8 text-center shrink-0">#${rowIdx}</div>
+                    <div class="w-full md:w-1/3">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">企业名称 <span class="text-red-500">*</span></label>
+                        <input type="text" value="${name}" list="historyLeaderNameList" oninput="autoFillLeaderRow(${rowIdx}, this.value)" required class="leader-name-input w-full bg-[#1e293b] text-sm text-slate-100 border border-slate-700 rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 transition-colors" placeholder="如: 万丰奥威">
+                    </div>
+                    <div class="w-full md:w-1/3">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">证券代码 <span class="text-red-500">*</span></label>
+                        <input type="text" value="${code}" oninput="autoFillLeaderByCode(${rowIdx}, this.value)" required class="leader-code-input w-full bg-[#1e293b] text-sm text-slate-100 border border-slate-700 rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-mono transition-colors" placeholder="如: 002085">
+                    </div>
+                </div>
+                <div class="pl-0 md:pl-12 w-full">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">个股逻辑</label>
+                    <textarea class="leader-analysis-input w-full bg-[#1e293b] text-sm text-slate-100 border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-emerald-500 resize-y transition-colors leading-relaxed" style="overflow:hidden;" oninput="autoResize(this)" rows="2" placeholder="填写该个股的核心驱动逻辑...">${analysis}</textarea>
+                </div>`;
             ct.appendChild(div);
+            setTimeout(() => { const t = div.querySelector('textarea'); if(t) autoResize(t); }, 0);
         }
 
         function removeLeaderField(index) { const el = $id(`leader-row-${index}`); if (el) { el.remove(); reorderLeaders(); } }
@@ -790,10 +821,10 @@
         function synchronizeDatabase(ur) { const tl2=(ur.level2||"未分类热点").trim().toLowerCase(), tl1=ur.level1?ur.level1.trim():"", tl1a=ur.level1Analysis?ur.level1Analysis.trim():"", tha=ur.hotspotAnalysis?ur.hotspotAnalysis.trim():""; let sy=0; stockData.forEach(r=>{if((r.level2||"未分类热点").trim().toLowerCase()===tl2){if(r.level1!==tl1||r.level1Analysis!==tl1a||r.hotspotAnalysis!==tha){r.level1=tl1;r.level1Analysis=tl1a;r.hotspotAnalysis=tha;sy++;}}}); return sy; }
         function buildHistoryDatalists() { const s1=new Set(), s2=new Set(), sl=new Set(); stockData.forEach(i=>{if(i.level1)s1.add(i.level1);if(i.level2)s2.add(i.level2);if(i.leaders)i.leaders.forEach(l=>{if(l.name)sl.add(l.name);});}); const dl1=$id('historyLevel1List'); if(dl1){dl1.innerHTML=""; s1.forEach(v=>dl1.appendChild(new Option(v)));} const dl2=$id('historyLevel2List'); if(dl2){dl2.innerHTML=""; s2.forEach(v=>dl2.appendChild(new Option(v)));} const dll=$id('historyLeaderNameList'); if(dll){dll.innerHTML=""; sl.forEach(v=>dll.appendChild(new Option(v)));} updateLevel2FormDatalist(); }
         function updateLevel2FormDatalist() { const v=$id('formLevel1')?$id('formLevel1').value.trim().toLowerCase():"", dl=$id('historyLevel2List'); if(!dl)return; dl.innerHTML=""; const s=new Set(); stockData.forEach(i=>{if(!v||(i.level1&&i.level1.toLowerCase()===v))if(i.level2)s.add(i.level2);}); s.forEach(x=>dl.appendChild(new Option(x))); }
-        function autoFillEditModalByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('editStockLevel1').value=mr.level1||""; $id('editStockLevel1Analysis').value=mr.level1Analysis||""; $id('editStockHotspotAnalysis').value=mr.hotspotAnalysis||""; showToast(`已带入【${v}】`);} }
-        function autoFillHotspotByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('formLevel1').value=mr.level1||""; $id('formLevel1Analysis').value=mr.level1Analysis||""; $id('formHotspotAnalysis').value=mr.hotspotAnalysis||""; updateLevel2FormDatalist();} }
-        function autoFillLeaderByCode(r,v) { v=v.trim(); if(v.length<6)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.code.trim()===v);if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-name-input').value=ml.name; row.querySelector('.leader-analysis-input').value=ml.analysis;}} }
-        function autoFillLeaderRow(r,v) { v=v.trim(); if(!v)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.name.toLowerCase()===v.toLowerCase());if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-code-input').value=ml.code; row.querySelector('.leader-analysis-input').value=ml.analysis;}} }
+        function autoFillEditModalByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('editStockLevel1').value=mr.level1||""; $id('editStockLevel1Analysis').value=mr.level1Analysis||""; $id('editStockHotspotAnalysis').value=mr.hotspotAnalysis||""; showToast(`已带入【${v}】`); setTimeout(()=>{autoResize($id('editStockLevel1Analysis')); autoResize($id('editStockHotspotAnalysis'));}, 0);} }
+        function autoFillHotspotByLevel2(v) { v=v.trim(); if(!v)return; let mr=stockData.find(i=>i.level2.toLowerCase()===v.toLowerCase()); if(mr){$id('formLevel1').value=mr.level1||""; $id('formLevel1Analysis').value=mr.level1Analysis||""; $id('formHotspotAnalysis').value=mr.hotspotAnalysis||""; updateLevel2FormDatalist(); setTimeout(()=>{autoResize($id('formLevel1Analysis')); autoResize($id('formHotspotAnalysis'));}, 0);} }
+        function autoFillLeaderByCode(r,v) { v=v.trim(); if(v.length<6)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.code.trim()===v);if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-name-input').value=ml.name; const ta = row.querySelector('.leader-analysis-input'); ta.value=ml.analysis; autoResize(ta);}} }
+        function autoFillLeaderRow(r,v) { v=v.trim(); if(!v)return; let ml=null; for(let rec of stockData){if(rec.leaders){ml=rec.leaders.find(l=>l.name.toLowerCase()===v.toLowerCase());if(ml)break;}} if(ml){const row=$id(`leader-row-${r}`); if(row){row.querySelector('.leader-code-input').value=ml.code; const ta = row.querySelector('.leader-analysis-input'); ta.value=ml.analysis; autoResize(ta);}} }
 
         // --- Heatmap & Dashboard ---
         function getTimelineDays(y, m, trk) { const arr=[]; if(trk){ if(stockData.length===0)return generatePastDays(60); const dt=stockData.map(r=>new Date(r.date).getTime()).filter(t=>!isNaN(t)); if(dt.length===0)return generatePastDays(60); let c=new Date(new Date(Math.min(...dt)).getFullYear(),new Date(Math.min(...dt)).getMonth(),1), e=new Date(new Date(Math.max(...dt)).getFullYear(),new Date(Math.max(...dt)).getMonth()+1,0); while(c<=e){arr.push({fullDate:`${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`,shortDate:`${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`});c.setDate(c.getDate()+1);} } else { let c=new Date(y,m-1,1), e=new Date(y,m,0); while(c<=e){arr.push({fullDate:`${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`,shortDate:`${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`});c.setDate(c.getDate()+1);} } return arr; }
@@ -900,6 +931,28 @@
         const sf=isD?dbSortField:dragonSortField, sa=isD?dbSortAsc:dragonSortAsc;
         if(sf){ ft.sort((x,y)=>{ const cA=stockPriceCache[x.code], cB=stockPriceCache[y.code]; let vA,vB; switch(sf){ case 'level1':vA=x.level1||"";vB=y.level1||"";break; case 'level2':case 'date':vA=x.level2||x.date;vB=y.level2||y.date;break; case 'level1Analysis':vA=x.level1Analysis||"";vB=y.level1Analysis||"";break; case 'hotspotAnalysis':vA=x.hotspotAnalysis||"";vB=y.hotspotAnalysis||"";break; case 'name':vA=x.name;vB=y.name;break; case 'intensity':vA=x.intensity;vB=y.intensity;break; case 'analysis':vA=x.analysis||"";vB=y.analysis||"";break; case 'limitUpCount10':vA=cA?(cA.limitUpCount10||0):-1;vB=cB?(cB.limitUpCount10||0):-1;break; case 'currentPrice':vA=cA&&typeof cA.currentPrice==='number'&&!isNaN(cA.currentPrice)?cA.currentPrice:-1;vB=cB&&typeof cB.currentPrice==='number'&&!isNaN(cB.currentPrice)?cB.currentPrice:-1;break; case 'fiveDayChangePercent':vA=cA&&typeof cA.fiveDayChangePercent==='number'&&!isNaN(cA.fiveDayChangePercent)?cA.fiveDayChangePercent:-999;vB=cB&&typeof cB.fiveDayChangePercent==='number'&&!isNaN(cB.fiveDayChangePercent)?cB.fiveDayChangePercent:-999;break; case 'pullback':vA=cA&&typeof cA.currentPrice==='number'&&!isNaN(cA.currentPrice)&&cA.oneMonthHigh?((cA.currentPrice-cA.oneMonthHigh)/cA.oneMonthHigh):-100;vB=cB&&typeof cB.currentPrice==='number'&&!isNaN(cB.currentPrice)&&cB.oneMonthHigh?((cB.currentPrice-cB.oneMonthHigh)/cB.oneMonthHigh):-100;break; case 'signal':vA=cA&&typeof cA.currentPrice==='number'&&!isNaN(cA.currentPrice)&&cA.oneMonthHigh?getDragonSignal(((cA.currentPrice-cA.oneMonthHigh)/cA.oneMonthHigh)*100,cA.isDoji,cA.isNearMA20,cA.macdDiv).label:"";vB=cB&&typeof cB.currentPrice==='number'&&!isNaN(cB.currentPrice)&&cB.oneMonthHigh?getDragonSignal(((cB.currentPrice-cB.oneMonthHigh)/cB.oneMonthHigh)*100,cB.isDoji,cB.isNearMA20,cB.macdDiv).label:"";break; default:return 0; } if(vA<vB)return sa?-1:1; if(vA>vB)return sa?1:-1; return 0; }); }
         if(ft.length===0){ b.innerHTML=`<tr><td colspan="10" class="py-12 text-center text-slate-500 text-sm">暂无符合条件。</td></tr>`; updateSortIconsAndBreadcrumbs(); return; }
+
+        // 计算合并单元格 (rowspan)
+        if (isD) {
+            const mergeCols = ['level1', 'level1Analysis', 'level2', 'hotspotAnalysis'];
+            mergeCols.forEach(col => {
+                let startIdx = 0;
+                if (ft.length > 0) ft[0]['_rs_' + col] = 1;
+                for (let i = 1; i < ft.length; i++) {
+                    let canMerge = ft[i][col] === ft[startIdx][col] && ft[i][col] !== undefined && ft[i][col] !== null && ft[i][col] !== "";
+                    if (col === 'level2' || col === 'hotspotAnalysis') {
+                         if (ft[i]['level1'] !== ft[startIdx]['level1']) canMerge = false;
+                    }
+                    if (canMerge) {
+                        ft[startIdx]['_rs_' + col]++;
+                        ft[i]['_rs_' + col] = 0;
+                    } else {
+                        startIdx = i;
+                        ft[startIdx]['_rs_' + col] = 1;
+                    }
+                }
+            });
+        }
         
         ft.forEach(c=>{
             const ca=stockPriceCache[c.code]; let cp="--", fd="--", pb="--", lu="--", sb=`<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700 animate-pulse">⏳ 待诊断</span>`;
@@ -911,16 +964,28 @@
                     const c10=ca.limitUpCount10||0; if(c10>0)lu=`<span class="px-2 py-0.5 rounded text-xs bg-red-500/10 text-red-400 border border-red-500/20 font-bold font-mono">${c10}次</span>`;else lu=`<span class="text-slate-500 font-mono">0次</span>`;
                 }else{cp=`<span class="text-slate-500 text-[10px]">停牌/无效</span>`; sb=`<span class="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-500 border border-slate-700">状态异常</span>`;}
             }
-            const iw=watchlistData.some(i=>i.code===c.code), ab=`<div class="space-x-1 min-w-[120px] text-right"><button onclick="toggleWatchlist('${c.name}', '${c.code}')" class="transition-colors ${iw?'text-amber-400 text-lg':'text-slate-500 hover:text-amber-300 text-lg'}">${iw?'★':'☆'}</button><button id="${m}-btn-${c.code}" onclick="diagnoseSingleStock('${c.name}', '${c.code}', '${m}').then(()=>renderPoolTable('${m}'))" class="text-[11px] text-emerald-400 hover:text-emerald-300 bg-emerald-900/20 px-2 py-1 rounded transition-all ml-1">诊断</button><span id="${m}-spin-${c.code}" class="hidden text-emerald-400 text-xs animate-pulse ml-1">...</span>${isD?`<button onclick="openEditStockModal('${c.date}', '${c.level2}', '${c.code}')" class="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-900/20 px-2 py-1 rounded ml-1">编辑</button><button onclick="deleteStockFromDatabase('${c.date}', '${c.code}')" class="text-[11px] text-red-400 hover:text-red-300 px-1 py-1 rounded">删除</button>`:''}</div>`;
+            const iw=watchlistData.some(i=>i.code===c.code), ab=`<div class="space-x-1 min-w-[120px] text-center"><button onclick="toggleWatchlist('${c.name}', '${c.code}')" class="transition-colors ${iw?'text-amber-400 text-lg':'text-slate-500 hover:text-amber-300 text-lg'}">${iw?'★':'☆'}</button><button id="${m}-btn-${c.code}" onclick="diagnoseSingleStock('${c.name}', '${c.code}', '${m}').then(()=>renderPoolTable('${m}'))" class="text-[11px] text-emerald-400 hover:text-emerald-300 bg-emerald-900/20 px-2 py-1 rounded transition-all ml-1">诊断</button><span id="${m}-spin-${c.code}" class="hidden text-emerald-400 text-xs animate-pulse ml-1">...</span>${isD?`<button onclick="openEditStockModal('${c.date}', '${c.level2}', '${c.code}')" class="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-900/20 px-2 py-1 rounded ml-1">编辑</button><button onclick="deleteStockFromDatabase('${c.date}', '${c.code}')" class="text-[11px] text-red-400 hover:text-red-300 px-1 py-1 rounded">删除</button>`:''}</div>`;
             const nm=`<div class="font-bold text-emerald-400 hover:text-emerald-300 cursor-pointer hover:underline transition-all" onclick="jumpToDatabaseAndFilter('${c.code}', '${c.name}')" title="定位该股">${c.name}</div><div class="text-[10px] text-slate-500 font-mono-custom">${c.code}</div>`;
             const dL=`<div class="text-xs font-semibold text-slate-300"><span class="text-emerald-400 font-bold">${c.level2}</span><span class="text-slate-500 font-normal">(${c.level1||'--'})</span></div><div class="text-[10px] text-slate-500 font-mono-custom">首爆: ${c.date}</div>`;
             const it=`<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/80">${c.intensity}</span>`;
-            const an=`<div class="whitespace-normal break-words max-w-[240px] leading-relaxed text-[11px]">${c.analysis||"--"}</div>`;
+            const an=`<div class="whitespace-normal break-words max-w-[240px] leading-relaxed text-[11px] mx-auto">${c.analysis||"--"}</div>`;
 
-            const tr=document.createElement('tr'); tr.className="hover:bg-slate-800/30 transition-all border-b border-slate-800/40 text-xs";
-            const td=(v,cl="")=>`<td class="py-4 px-3 ${cl}">${v}</td>`;
-            if(isD) tr.innerHTML=td(`<div class="font-semibold text-slate-300 max-w-[120px] truncate" title="${c.level1||''}">${c.level1||"--"}</div>`)+td(`<div class="whitespace-normal break-words max-w-[180px] leading-relaxed text-[10px] text-slate-400">${c.level1Analysis||"--"}</div>`)+td(`<div class="text-emerald-400 font-bold">${c.level2}</div>`)+td(`<div class="whitespace-normal break-words max-w-[200px] leading-relaxed text-[11px] text-slate-300">${c.hotspotAnalysis||"--"}</div>`)+td(nm)+td(an,"text-slate-300")+td(cp,"font-mono-custom")+td(fd,"font-mono-custom")+td(pb,"font-mono-custom")+td(ab,"text-right");
-            else tr.innerHTML=td(dL)+td(it)+td(nm)+td(an,"text-slate-300")+td(lu,"font-mono-custom")+td(cp,"font-mono-custom")+td(fd,"font-mono-custom")+td(pb,"font-mono-custom")+td(sb)+td(ab,"text-right");
+            const tr=document.createElement('tr'); tr.className="hover:bg-slate-800/30 transition-all border-b border-slate-800/40 text-xs text-center";
+            const td=(v,cl="",rs=1)=>{if(rs===0)return"";return `<td ${rs>1?`rowspan="${rs}"`:''} class="py-4 px-3 border-b border-slate-800/40 ${cl}">${v}</td>`;};
+            if(isD) {
+                const rsL1 = c._rs_level1, rsL1A = c._rs_level1Analysis, rsL2 = c._rs_level2, rsHA = c._rs_hotspotAnalysis;
+                const bgL1 = rsL1 > 1 ? "bg-[#1e293b]/60 border-r border-slate-700/50 align-middle" : "align-middle";
+                const bgL1A = rsL1A > 1 ? "bg-[#1e293b]/40 border-r border-slate-700/50 align-middle" : "align-middle";
+                const bgL2 = rsL2 > 1 ? "bg-emerald-900/10 border-r border-emerald-800/30 align-middle" : "align-middle";
+                const bgHA = rsHA > 1 ? "bg-emerald-900/5 border-r border-emerald-800/20 align-middle" : "align-middle";
+                tr.innerHTML=
+                    td(`<div class="font-semibold text-slate-300 max-w-[120px] whitespace-normal break-words mx-auto" title="${c.level1||''}">${c.level1||"--"}</div>`, bgL1, rsL1) +
+                    td(`<div class="whitespace-normal break-words leading-relaxed text-[11px] text-slate-400 mx-auto">${c.level1Analysis||"--"}</div>`, bgL1A, rsL1A) +
+                    td(`<div class="text-emerald-400 font-bold mx-auto">${c.level2}</div>`, bgL2, rsL2) +
+                    td(`<div class="whitespace-normal break-words leading-relaxed text-[11px] text-slate-300 mx-auto">${c.hotspotAnalysis||"--"}</div>`, bgHA, rsHA) +
+                    td(nm, "align-middle") + td(an,"text-slate-300 align-middle") + td(cp,"font-mono-custom align-middle") + td(fd,"font-mono-custom align-middle") + td(pb,"font-mono-custom align-middle") + td(ab,"text-center align-middle");
+            }
+            else tr.innerHTML=td(dL,"align-middle")+td(it,"align-middle")+td(nm,"align-middle")+td(an,"text-slate-300 align-middle")+td(lu,"font-mono-custom align-middle")+td(cp,"font-mono-custom align-middle")+td(fd,"font-mono-custom align-middle")+td(pb,"font-mono-custom align-middle")+td(sb,"align-middle")+td(ab,"text-center align-middle");
             b.appendChild(tr);
         });
         updateSortIconsAndBreadcrumbs();
@@ -1104,7 +1169,7 @@
         const heatmapMonthSelect = $id('heatmapMonthSelect'); if (heatmapMonthSelect) heatmapMonthSelect.value = new Date().getMonth() + 1;
         renderHeatmap(); updateTrackerSelect(); renderIndustryList(); loadActiveIndustry();
         if (stockData.length > 0) { selectDate(stockData[0].date); } else {
-            const listContainer = $id('dailyHotspotsList'); if (listContainer) listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">暂无数据，请去“数据录入”建档。</div>`;
+            const listContainer = $id('dailyHotspotsList'); if (listContainer) listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">暂无数据，请去“录入与备份”建档。</div>`;
             const leadersGrid = $id('detailLeadersGrid'); if (leadersGrid) leadersGrid.innerHTML = "";
         }
     }
