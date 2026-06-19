@@ -65,6 +65,7 @@
         </div>
     </div>
 
+    <!-- 全局编辑弹窗 -->
     <div id="editStockModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-[100] p-4">
         <div class="bg-[#1e293b] border border-emerald-700/50 p-6 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
@@ -74,6 +75,7 @@
             <div class="space-y-4 overflow-y-auto pr-2 no-scrollbar flex-1">
                 <input type="hidden" id="editStockOriginalCode">
                 <input type="hidden" id="editStockOriginalDate">
+                <input type="hidden" id="editStockOriginalLevel2">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] text-slate-400 mb-1">个股名称 <span class="text-red-500">*</span></label>
@@ -552,6 +554,15 @@
             renderPoolTable('database'); showToast(`🚀 已自动跳转并定位【${name}】`, "success");
         }
 
+        function jumpToDatabaseAndFilterByLevel2(level2) {
+            switchTab('database');
+            Object.keys(dbFilters).forEach(k => dbFilters[k] = []);
+            dbFilters.level2 = [level2];
+            if ($id('dbSearchInput')) $id('dbSearchInput').value = ""; // 清空全局搜索框以防冲突
+            renderPoolTable('database');
+            showToast(`🚀 已跳转并筛选二级热点：【${level2}】`, "success");
+        }
+
         // --- Fetch Engine ---
         function runWithConcurrency(tasks, limit = 4) {
             const results = []; let active = 0; let index = 0;
@@ -786,6 +797,126 @@
             } catch(e) { console.warn("Diagnostic failed", e); } finally { if (spin) spin.classList.add('hidden'); if (btn) btn.classList.remove('hidden'); }
         }
 
+        // --- 全局编辑框功能 (Issue 1 修复) ---
+        function openEditStockModal(date, level2, code) {
+            const rec = stockData.find(r => r.date === date && r.level2 === level2);
+            if (!rec) return showToast("未找到相关研报归档数据", "error");
+            
+            const ldr = rec.leaders.find(l => l.code === code);
+            if (!ldr) return showToast("未找到指定的个股记录", "error");
+
+            $id('editStockOriginalDate').value = date;
+            $id('editStockOriginalLevel2').value = level2;
+            $id('editStockOriginalCode').value = code;
+
+            $id('editStockName').value = ldr.name || "";
+            $id('editStockCode').value = ldr.code || "";
+            $id('editStockLevel1').value = rec.level1 || "";
+            $id('editStockLevel2').value = rec.level2 || "";
+            $id('editStockLevel1Analysis').value = rec.level1Analysis || "";
+            $id('editStockHotspotAnalysis').value = rec.hotspotAnalysis || "";
+            $id('editStockAnalysis').value = ldr.analysis || "";
+
+            $id('editStockModal').classList.remove('hidden');
+
+            setTimeout(() => {
+                autoResize($id('editStockLevel1Analysis'));
+                autoResize($id('editStockHotspotAnalysis'));
+                autoResize($id('editStockAnalysis'));
+            }, 50);
+        }
+
+        function closeEditStockModal() {
+            $id('editStockModal').classList.add('hidden');
+        }
+
+        function saveEditedStock() {
+            const origDate = $id('editStockOriginalDate').value;
+            const origLevel2 = $id('editStockOriginalLevel2').value;
+            const origCode = $id('editStockOriginalCode').value;
+
+            const nName = $id('editStockName').value.trim();
+            const nCode = $id('editStockCode').value.trim();
+            const nL1 = $id('editStockLevel1').value.trim();
+            const nL2 = $id('editStockLevel2').value.trim();
+            const nL1A = $id('editStockLevel1Analysis').value.trim();
+            const nHA = $id('editStockHotspotAnalysis').value.trim();
+            const nAna = $id('editStockAnalysis').value.trim();
+
+            if (!nName || !nCode) return showToast("个股名称和代码不可为空！", "error");
+
+            // 定位原始数据
+            const recIndex = stockData.findIndex(r => r.date === origDate && r.level2 === origLevel2);
+            if (recIndex === -1) return showToast("记录同步异常，未找到原始数据", "error");
+            const rec = stockData[recIndex];
+
+            // 定位目标个股
+            const ldrIndex = rec.leaders.findIndex(l => l.code === origCode);
+            if (ldrIndex === -1) return showToast("未找到目标个股", "error");
+
+            // 更新个股自身属性
+            rec.leaders[ldrIndex].name = nName;
+            rec.leaders[ldrIndex].code = nCode;
+            rec.leaders[ldrIndex].analysis = nAna;
+
+            // 依据是否修改了二级热点(L2)做对应重整处理
+            if (origLevel2 !== nL2) {
+                // 如果修改了二级热点，将该个股从原分组抽离
+                rec.leaders.splice(ldrIndex, 1);
+                
+                // 试图放入同日期的目标新分组
+                let newRecIndex = stockData.findIndex(r => r.date === origDate && r.level2 === nL2);
+                if (newRecIndex !== -1) {
+                    stockData[newRecIndex].leaders.push({name: nName, code: nCode, analysis: nAna});
+                    stockData[newRecIndex].level1 = nL1;
+                    stockData[newRecIndex].level1Analysis = nL1A;
+                    stockData[newRecIndex].hotspotAnalysis = nHA;
+                } else {
+                    // 若无匹配分组，则创建新的归档组
+                    stockData.push({
+                        date: origDate,
+                        level1: nL1,
+                        level2: nL2,
+                        level1Analysis: nL1A,
+                        hotspotAnalysis: nHA,
+                        intensity: rec.intensity, // 继承旧的强度
+                        leaders: [{name: nName, code: nCode, analysis: nAna}]
+                    });
+                }
+                
+                // 若原分组被清空，则删掉该归档
+                if (rec.leaders.length === 0) stockData.splice(recIndex, 1);
+            } else {
+                // 若二级热点没变，直接更新当前组信息
+                rec.level1 = nL1;
+                rec.level2 = nL2;
+                rec.level1Analysis = nL1A;
+                rec.hotspotAnalysis = nHA;
+            }
+
+            // 全局穿透同步：更新全库所有具有相同新 level2 的研报逻辑
+            let syncCount = 0;
+            stockData.forEach(r => {
+                if (r.level2 === nL2) {
+                    if (r.level1 !== nL1 || r.level1Analysis !== nL1A || r.hotspotAnalysis !== nHA) {
+                        r.level1 = nL1;
+                        r.level1Analysis = nL1A;
+                        r.hotspotAnalysis = nHA;
+                        syncCount++;
+                    }
+                }
+            });
+
+            localStorage.setItem('stockRecordsV2', JSON.stringify(stockData));
+            showToast(`✅ 已保存！并全局同步更新了 ${syncCount} 条具有相同二级热点的逻辑`, "success");
+            
+            closeEditStockModal();
+            renderAll();
+            renderPoolTable('database');
+            renderPoolTable('dragon');
+            renderHistoryTable();
+        }
+
         // --- Data Entry UI (上下布局全宽改造) ---
         function addLeaderField(name = "", code = "", analysis = "") {
             currentLeadersCount++; 
@@ -1004,15 +1135,56 @@
         resetForm(); renderHistoryTable(); buildHistoryDatalists(); renderAll();
     }
     
+    // (修复2) 在操作栏中增加了“编辑”按钮
     function renderHistoryTable() {
         const b=$id('historyTableBody'); if(!b)return; b.innerHTML="";
         if(stockData.length===0){ b.innerHTML=`<tr><td colspan="6" class="py-8 text-center text-slate-500 text-sm">暂无数据，请录入。</td></tr>`; return; }
         stockData.forEach((r)=>{
             let ib=r.intensity==="超强"?"bg-red-500/20 text-red-400 border border-red-500/30":(r.intensity==="强"?"bg-orange-500/20 text-orange-400 border border-orange-500/30":"bg-yellow-500/20 text-yellow-400 border border-yellow-500/30");
             const tr=document.createElement('tr'); tr.className="border-b border-slate-800 hover:bg-slate-800/40 text-xs";
-            tr.innerHTML=`<td class="py-3 px-4 font-mono text-center">${r.date}</td><td class="py-3 px-4">${r.level1||'--'}</td><td class="py-3 px-4 font-bold text-emerald-400">${r.level2}</td><td class="py-3 px-4"><span class="px-2 py-0.5 rounded ${ib}">${r.intensity}</span></td><td class="py-3 px-4 font-mono font-bold text-emerald-500">${r.leaders?.length||0}</td><td class="py-3 px-4 text-right"><button onclick="deleteRecord('${r.date}', '${r.level2}')" class="text-red-400 hover:text-red-300 underline font-medium">删除整组</button></td>`;
+            
+            // (修复3) 二级热点字段点击后可以自动跳转到“所有个股”数据库进行过滤查看
+            tr.innerHTML=`
+                <td class="py-3 px-4 font-mono text-center">${r.date}</td>
+                <td class="py-3 px-4">${r.level1||'--'}</td>
+                <td class="py-3 px-4 font-bold text-emerald-400 cursor-pointer hover:underline hover:text-emerald-300 transition-colors" title="点击跳转所有个股并过滤该板块" onclick="jumpToDatabaseAndFilterByLevel2('${r.level2}')">${r.level2}</td>
+                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded ${ib}">${r.intensity}</span></td>
+                <td class="py-3 px-4 font-mono font-bold text-emerald-500">${r.leaders?.length||0}</td>
+                <td class="py-3 px-4 text-right">
+                    <button onclick="editRecord('${r.date}', '${r.level2}')" class="text-blue-400 hover:text-blue-300 underline font-medium mr-3">编辑</button>
+                    <button onclick="deleteRecord('${r.date}', '${r.level2}')" class="text-red-400 hover:text-red-300 underline font-medium">删除</button>
+                </td>`;
             b.appendChild(tr);
         });
+    }
+
+    // 将已有归档提取至上方表单供用户二次修改
+    function editRecord(dt, l2) {
+        const rec = stockData.find(r => r.date === dt && r.level2 === l2);
+        if (!rec) return showToast("未找到对应的归档记录", "error");
+
+        $id('formDate').value = rec.date || "";
+        $id('formLevel1').value = rec.level1 || "";
+        $id('formLevel2').value = rec.level2 || "";
+        $id('formIntensity').value = rec.intensity || "一般";
+        $id('formLevel1Analysis').value = rec.level1Analysis || "";
+        $id('formHotspotAnalysis').value = rec.hotspotAnalysis || "";
+
+        const ct = $id('leadersInputContainer');
+        if (ct) ct.innerHTML = "";
+        currentLeadersCount = 0;
+
+        if (rec.leaders && rec.leaders.length > 0) {
+            rec.leaders.forEach(l => {
+                addLeaderField(l.name, l.code, l.analysis);
+            });
+        } else {
+            addLeaderField();
+        }
+
+        switchTab('editor'); // 确保我们在编辑tab下
+        $id('recordForm').scrollIntoView({ behavior: 'smooth' }); // 滚动到上方表单
+        showToast(`✅ 已将【${l2}】加载到表单，可直接修改并保存覆盖。`, "success");
     }
 
     function deleteRecord(dt, l2) {
