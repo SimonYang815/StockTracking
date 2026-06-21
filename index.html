@@ -451,7 +451,7 @@
         let columnFilters = { name: [], date: [], intensity: [], analysis: [], limitUpCount10: [], currentPrice: [], fiveDayChangePercent: [], pullback: [], signal: [] };
         
         let dragonSortField = "", dragonSortAsc = true, dragonDojiOnlyFilter = false;
-        let dbSortField = "", dbSortAsc = true;
+        let dbSortField = "level2", dbSortAsc = true;
         let currentFilterField = "", currentFilterMode = "dragon", activeInlineFilterId = null; 
         
         let stockPriceCache = JSON.parse(localStorage.getItem('stockPriceCache')) || {};
@@ -653,7 +653,6 @@
                 else symbol = `sz${c}`;
                 
                 const varName = `kline_${c}_${Date.now()}_${Math.floor(Math.random() * 100000)}`; 
-                window[varName] = function(data) { window[varName + '_data'] = data; };
                 
                 const script = document.createElement('script'); 
                 script.src = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?_var=${varName}&param=${symbol},day,,,30,qfq`;
@@ -663,14 +662,11 @@
                 function cleanup() { 
                     clearTimeout(timer); 
                     if (script.parentNode) script.parentNode.removeChild(script); 
-                    try { 
-                        delete window[varName]; 
-                        delete window[varName + '_data']; 
-                    } catch(e) {} 
+                    try { delete window[varName]; } catch(e) {} 
                 }
                 
                 script.onload = () => { 
-                    let data = window[varName + '_data'] || window[varName];
+                    let data = window[varName];
                     if (data && data.data && data.data[symbol]) {
                         const arr = data.data[symbol].qfqday || data.data[symbol].day || [];
                         resolve(arr.filter(x => Array.isArray(x)));
@@ -715,6 +711,36 @@
                 script.onerror = () => { cleanup(); resolve(null); }; 
                 document.body.appendChild(script);
             });
+        }
+
+        function fetchEastMoneyKline(code) {
+            return new Promise((resolve) => {
+                let c = String(code).trim();
+                while (c.length < 6) c = '0' + c;
+                let secid = "0." + c;
+                if (/^(60|68|90|73|51)/.test(c)) secid = "1." + c;
+                
+                const url = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1&fields2=f51,f52,f53,f54,f55,f56&klt=101&fqt=1&end=20500101&lmt=30`;
+                
+                fetch(url)
+                    .then(res => res.json())
+                    .then(json => {
+                        if (json && json.data && json.data.klines) {
+                            const arr = json.data.klines.map(k => {
+                                const p = k.split(',');
+                                return [p[0], p[1], p[2], p[3], p[4], p[5]];
+                            });
+                            resolve(arr);
+                        } else resolve([]);
+                    })
+                    .catch(err => resolve([]));
+            });
+        }
+
+        async function fetchKlineData(code) {
+            let klines = await fetchEastMoneyKline(code);
+            if (!klines || klines.length === 0) klines = await fetchTencentKline(code);
+            return klines;
         }
 
         function processKlineData(code, name, klines, cache) {
@@ -810,7 +836,7 @@
 
             let completed = 0;
             await runWithConcurrency(uniqueCodes.map(code => async () => {
-                const klines = await fetchTencentKline(code);
+                const klines = await fetchKlineData(code);
                 if (klines.length > 0) {
                     const name = candidates.find(c => c.code === code)?.name || "";
                     stockPriceCache[code] = processKlineData(code, name, klines, stockPriceCache[code] || {});
@@ -868,7 +894,7 @@
             }
 
             await runWithConcurrency(uniqueCodes.map(code => async () => {
-                const klines = await fetchTencentKline(code);
+                const klines = await fetchKlineData(code);
                 if (klines.length > 0) {
                     const name = candidates.find(c => c.code === code)?.name || "";
                     stockPriceCache[code] = processKlineData(code, name, klines, stockPriceCache[code] || {});
@@ -912,7 +938,7 @@
                     stockPriceCache[code].timestamp = Date.now();
                 }
 
-                const klines = await fetchTencentKline(code);
+                const klines = await fetchKlineData(code);
                 if (klines.length > 0) {
                     stockPriceCache[code] = processKlineData(code, name, klines, stockPriceCache[code] || {});
                 }
@@ -1539,7 +1565,7 @@
             } 
             
             await runWithConcurrency(c.map(x => async() => {
-                const kl = await fetchTencentKline(x); 
+                const kl = await fetchKlineData(x); 
                 if(kl.length > 0) {
                     stockPriceCache[x] = processKlineData(x, ar.leaders.find(l => l.code === x)?.name || "", kl, stockPriceCache[x] || {});
                 }
@@ -1708,6 +1734,8 @@
             currentFilterMode = m; 
             
             let sv = [];
+            let hotspotAvgs = {};
+            
             if (f === 'fiveDayChangePercent' || f === 'pullback') {
                 const c = m === 'dragon' ? scanDragonCandidates() : scanDatabaseCandidates();
                 let vals = []; 
@@ -1748,11 +1776,29 @@
             } else {
                 const c = m === 'dragon' ? scanDragonCandidates() : scanDatabaseCandidates();
                 const u = new Set(); 
-                c.forEach(x => u.add(getRowDisplayValue(x, f, m)));
+                c.forEach(x => {
+                    let val = getRowDisplayValue(x, f, m);
+                    u.add(val);
+                    if (f === 'level2') {
+                        const ca = stockPriceCache[x.code];
+                        if (!hotspotAvgs[val]) hotspotAvgs[val] = { sum: 0, count: 0 };
+                        if (ca && typeof ca.dailyChangePercent === 'number' && !isNaN(ca.dailyChangePercent)) {
+                            hotspotAvgs[val].sum += ca.dailyChangePercent;
+                            hotspotAvgs[val].count++;
+                        }
+                    }
+                });
                 
                 sv = Array.from(u).sort((a, b) => {
                     const nA = parseFloat(a), nB = parseFloat(b); 
                     if(!isNaN(nA) && !isNaN(nB)) return nA - nB; 
+                    
+                    if (f === 'level2') {
+                        let avgA = hotspotAvgs[a] && hotspotAvgs[a].count > 0 ? hotspotAvgs[a].sum / hotspotAvgs[a].count : -999;
+                        let avgB = hotspotAvgs[b] && hotspotAvgs[b].count > 0 ? hotspotAvgs[b].sum / hotspotAvgs[b].count : -999;
+                        if (avgA !== avgB) return avgB - avgA; 
+                    }
+                    
                     return String(a).localeCompare(String(b), 'zh');
                 });
             }
@@ -1762,16 +1808,27 @@
                     <button type="button" onclick="selectAllInlineCheckboxes('${mid}',true)" class="text-emerald-400 hover:text-emerald-300 font-semibold underline">全选</button>
                     <button type="button" onclick="selectAllInlineCheckboxes('${mid}',false)" class="text-slate-400 hover:text-slate-300 font-semibold underline">清空</button>
                 </div>
-                <div class="max-h-48 overflow-y-auto no-scrollbar space-y-1">`;
+                <div class="max-h-[300px] overflow-y-auto overflow-x-hidden no-scrollbar space-y-1">`;
                 
             const caf = m === 'dragon' ? columnFilters[f] : dbFilters[f]; 
             
             sv.forEach(v => {
                 const ic = !caf || caf.length === 0 || caf.includes(v); 
+                let displayValue = v;
+                
+                if (f === 'level2' && hotspotAvgs[v] && hotspotAvgs[v].count > 0) {
+                    let avg = hotspotAvgs[v].sum / hotspotAvgs[v].count;
+                    let color = avg >= 0 ? "text-red-400" : "text-green-400";
+                    let sign = avg >= 0 ? "+" : "";
+                    displayValue = `<span>${v}</span> <span class="ml-1 ${color} font-mono text-[10px] whitespace-nowrap">(${sign}${avg.toFixed(2)}%)</span>`;
+                } else if (f === 'level2') {
+                    displayValue = `<span>${v}</span> <span class="ml-1 text-slate-500 font-mono text-[10px] whitespace-nowrap">(--)</span>`;
+                }
+                
                 h += `
-                    <label class="flex items-center gap-2 text-slate-300 text-xs hover:text-white cursor-pointer py-1 select-none">
-                        <input type="checkbox" value="${v}" ${ic ? 'checked' : ''} class="inline-filter-checkbox rounded bg-[#0f172a] border-slate-600 text-emerald-500 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer">
-                        <span class="truncate max-w-[120px]" title="${v}">${v}</span>
+                    <label class="flex items-center gap-2 text-slate-300 text-xs hover:text-white cursor-pointer py-1.5 select-none w-full pr-1">
+                        <input type="checkbox" value="${v}" ${ic ? 'checked' : ''} class="inline-filter-checkbox shrink-0 rounded bg-[#0f172a] border-slate-600 text-emerald-500 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer">
+                        <div class="flex-1 truncate" title="${v}">${displayValue}</div>
                     </label>`;
             });
             
@@ -1939,6 +1996,7 @@
                     html += `<th class="py-3 px-3 ${h.w ? `w-[${h.w}]` : ''} text-center">${h.name}</th>`;
                 } else {
                     const prefix = mode === 'database' ? 'db' : 'dg';
+                    const posClass = (h.id === 'level2' || h.id === 'date') ? 'left-0' : 'right-0';
                     html += `
                     <th class="py-3 px-3 ${h.w ? `w-[${h.w}]` : ''} ${h.minW ? `min-w-[${h.minW}]` : ''} relative text-center">
                         <div class="flex justify-center items-center gap-1">
@@ -1947,7 +2005,7 @@
                             </span>
                             <span class="cursor-pointer text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 text-[10px]" onclick="toggleInlineFilter(event, '${h.id}', '${mode}')">▼</span>
                         </div>
-                        <div id="inline-filter-${mode}-${h.id}" class="absolute top-full right-0 mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[150px] p-2 text-left text-slate-300 font-normal"></div>
+                        <div id="inline-filter-${mode}-${h.id}" class="absolute top-full ${posClass} mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-xl z-50 hidden min-w-[240px] max-w-[350px] p-2 text-left text-slate-300 font-normal"></div>
                     </th>`;
                 }
             });
@@ -2041,6 +2099,12 @@
                     } 
                     if(vA < vB) return sa ? -1 : 1; 
                     if(vA > vB) return sa ? 1 : -1; 
+                    
+                    if (sf === 'level2') {
+                        const pctA = cA && typeof cA.dailyChangePercent === 'number' && !isNaN(cA.dailyChangePercent) ? cA.dailyChangePercent : -999;
+                        const pctB = cB && typeof cB.dailyChangePercent === 'number' && !isNaN(cB.dailyChangePercent) ? cB.dailyChangePercent : -999;
+                        return pctB - pctA; 
+                    }
                     return 0; 
                 }); 
             }
@@ -2065,6 +2129,18 @@
                             startIdx = i;
                             ft[startIdx]['_rs_' + col] = 1;
                         }
+                    }
+                });
+            }
+
+            const hotspotStats = {};
+            if (isD) {
+                ft.forEach(c => {
+                    const ca = stockPriceCache[c.code];
+                    if (!hotspotStats[c.level2]) hotspotStats[c.level2] = { sum: 0, count: 0 };
+                    if (ca && typeof ca.dailyChangePercent === 'number' && !isNaN(ca.dailyChangePercent)) {
+                        hotspotStats[c.level2].sum += ca.dailyChangePercent;
+                        hotspotStats[c.level2].count++;
                     }
                 });
             }
@@ -2134,8 +2210,16 @@
                     const bgL2 = rsL2 > 1 ? "bg-emerald-900/10 border-r border-emerald-800/30" : "";
                     const bgHA = rsHA > 1 ? "bg-emerald-900/5 border-r border-emerald-800/20" : "";
                     
+                    let avgStr = "";
+                    if (rsL2 > 0 && hotspotStats[c.level2] && hotspotStats[c.level2].count > 0) {
+                        const avg = hotspotStats[c.level2].sum / hotspotStats[c.level2].count;
+                        const avgColor = avg >= 0 ? "text-red-400" : "text-green-400";
+                        const avgSign = avg >= 0 ? "+" : "";
+                        avgStr = `<div class="text-[10px] ${avgColor} font-mono-custom mt-2 bg-[#0f172a] rounded px-1.5 py-0.5 border border-slate-700/50 shadow-inner whitespace-nowrap">均幅: ${avgSign}${avg.toFixed(2)}%</div>`;
+                    }
+                    
                     rowContent = 
-                        renderTd(`<div class="text-emerald-400 font-bold mx-auto">${c.level2}</div>`, bgL2, rsL2) +
+                        renderTd(`<div class="flex flex-col items-center justify-center h-full"><div class="text-emerald-400 font-bold mx-auto text-center">${c.level2}</div>${avgStr}</div>`, bgL2, rsL2) +
                         renderTd(`<div class="whitespace-normal break-words leading-relaxed text-[11px] text-slate-300 mx-auto">${c.hotspotAnalysis || "--"}</div>`, bgHA, rsHA) +
                         renderTd(nm) + 
                         renderTd(an, "text-slate-300") + 
@@ -2366,25 +2450,24 @@
                         showToast("未检测到标准表头，自动切换为【极简导入模式】(仅提取名称和代码)..."); 
                     }
                     
-                    const grouped = {}; 
-                    let missingCodeCount = 0, fixedCodeCount = 0, importedCount = 0; 
-                    const todayStr = new Date().toISOString().slice(0, 10);
-                    
+                    const grouped = {}; let missingCodeCount = 0, fixedCodeCount = 0, importedCount = 0; const todayStr = new Date().toISOString().slice(0, 10);
                     for (let r = headerRowIndex + 1; r < rawRows.length; r++) {
-                        const row = rawRows[r]; 
-                        if (!row || !Array.isArray(row) || row.length === 0) continue; 
-                        
+                        const row = rawRows[r]; if (!row || !Array.isArray(row) || row.length === 0) continue; 
                         let dateVal = colMap.date !== -1 && row[colMap.date] ? row[colMap.date] : todayStr;
                         if (typeof dateVal === 'number' && dateVal > 20000) { 
                             const dateObj = XLSX.SSF.parse_date_code(dateVal); 
-                            dateVal = `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`; 
+                            if (dateObj) {
+                                dateVal = `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`; 
+                            } else {
+                                dateVal = todayStr;
+                            }
                         } else if (typeof dateVal === 'string') { 
                             dateVal = dateVal.replace(/\//g, '-').trim(); 
                             const parts = dateVal.split('-'); 
                             if(parts.length === 3) dateVal = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`; 
                         }
                         if(!dateVal) dateVal = todayStr;
-                        
+                        const level1 = colMap.l1 !== -1 ? String(row[colMap.l1] || "").trim() : "", level1Analysis = colMap.l1A !== -1 ? String(row[colMap.l1A] || "").trim() : "";
                         let level2 = colMap.l2 !== -1 && row[colMap.l2] ? String(row[colMap.l2]).trim() : "未分类热点";
                         const intensity = colMap.int !== -1 && row[colMap.int] ? String(row[colMap.int]).trim() : "超强";
                         const hotspotAnalysis = colMap.l2A !== -1 ? String(row[colMap.l2A] || "").trim() : "";
